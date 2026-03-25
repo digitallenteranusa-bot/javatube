@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Analytics - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.analytics-page { max-width:1100px; margin:24px auto; padding:0 16px; }
+		.stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:32px; }
+		.stat-card { background:var(--bg-secondary); border-radius:12px; padding:20px; text-align:center; }
+		.stat-value { font-size:28px; font-weight:700; color:var(--accent); }
+		.stat-label { font-size:13px; color:var(--text-secondary); margin-top:4px; }
+
+		.chart-section { background:var(--bg-secondary); border-radius:12px; padding:20px; margin-bottom:24px; }
+		.chart-section h2 { font-size:16px; margin-bottom:16px; }
+		.chart-bars { display:flex; align-items:flex-end; gap:4px; height:200px; padding-top:20px; }
+		.chart-bar { flex:1; min-width:8px; background:var(--accent); border-radius:4px 4px 0 0; position:relative; transition:height .3s; }
+		.chart-bar:hover { opacity:0.8; }
+		.chart-bar-label { position:absolute; bottom:-20px; left:50%; transform:translateX(-50%); font-size:9px; color:var(--text-secondary); white-space:nowrap; }
+		.chart-bar-value { position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:10px; color:var(--text-secondary); }
+
+		.video-table { width:100%; border-collapse:collapse; }
+		.video-table th, .video-table td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); font-size:13px; }
+		.video-table th { color:var(--text-secondary); font-weight:600; font-size:12px; }
+		.video-table tr:hover td { background:var(--bg-hover); }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="analytics-page">
+		<h1 style="margin-bottom:24px;">Creator Analytics</h1>
+
+		<div class="stats-grid" id="stats-grid"></div>
+
+		<div class="chart-section">
+			<h2>Views (30 Hari Terakhir)</h2>
+			<div class="chart-bars" id="views-chart"></div>
+		</div>
+
+		<div class="chart-section">
+			<h2>Top Video</h2>
+			<table class="video-table">
+				<thead><tr><th>Video</th><th>Views</th><th>Likes</th><th>Dislikes</th><th>Durasi</th></tr></thead>
+				<tbody id="top-videos"></tbody>
+			</table>
+		</div>
+
+		<div class="chart-section">
+			<h2>Performa Minggu Ini</h2>
+			<table class="video-table">
+				<thead><tr><th>Video</th><th>Hari Ini</th><th>Minggu Ini</th><th>Total</th><th>Komentar</th></tr></thead>
+				<tbody id="recent-stats"></tbody>
+			</table>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		if (!isLoggedIn()) window.location.href = '/login';
+
+		async function loadDashboard() {
+			const { ok, data } = await api('/api/analytics/dashboard');
+			if (!ok) return;
+			const s = data.data;
+			document.getElementById('stats-grid').innerHTML = `
+				<div class="stat-card"><div class="stat-value">${formatViews(s.totalViews).replace(' views','')}</div><div class="stat-label">Total Views</div></div>
+				<div class="stat-card"><div class="stat-value">${s.totalLikes}</div><div class="stat-label">Total Likes</div></div>
+				<div class="stat-card"><div class="stat-value">${s.totalVideos}</div><div class="stat-label">Video</div></div>
+				<div class="stat-card"><div class="stat-value">${s.totalSubscribers}</div><div class="stat-label">Subscriber</div></div>
+				<div class="stat-card"><div class="stat-value">${s.totalComments}</div><div class="stat-label">Komentar</div></div>
+			`;
+		}
+
+		async function loadViewsChart() {
+			const { ok, data } = await api('/api/analytics/views?days=30');
+			if (!ok) return;
+			const points = data.data || [];
+			if (!points.length) {
+				document.getElementById('views-chart').innerHTML = '<p style="color:var(--text-secondary);width:100%;text-align:center;">Belum ada data</p>';
+				return;
+			}
+			const maxViews = Math.max(...points.map(p => p.views), 1);
+			document.getElementById('views-chart').innerHTML = points.map(p => {
+				const h = Math.max((p.views / maxViews) * 180, 2);
+				const d = p.date.slice(5);
+				return `<div class="chart-bar" style="height:${h}px" title="${p.date}: ${p.views} views"><span class="chart-bar-value">${p.views}</span><span class="chart-bar-label">${d}</span></div>`;
+			}).join('');
+		}
+
+		async function loadTopVideos() {
+			const { ok, data } = await api('/api/analytics/top-videos?limit=10');
+			if (!ok) return;
+			document.getElementById('top-videos').innerHTML = (data.data || []).map(v => `
+				<tr>
+					<td><a href="/watch?v=${v.id}" style="color:var(--text-primary)">${escapeHtml(v.title)}</a></td>
+					<td>${formatViews(v.views).replace(' views','')}</td>
+					<td>${v.likes}</td>
+					<td>${v.dislikes}</td>
+					<td>${v.duration ? formatDuration(v.duration) : '-'}</td>
+				</tr>
+			`).join('');
+		}
+
+		async function loadRecentStats() {
+			const { ok, data } = await api('/api/analytics/recent');
+			if (!ok) return;
+			document.getElementById('recent-stats').innerHTML = (data.data || []).map(v => `
+				<tr>
+					<td><a href="/watch?v=${v.id}" style="color:var(--text-primary)">${escapeHtml(v.title)}</a></td>
+					<td>${v.today_views}</td>
+					<td>${v.week_views}</td>
+					<td>${formatViews(v.total_views).replace(' views','')}</td>
+					<td>${v.comments}</td>
+				</tr>
+			`).join('');
+		}
+
+		loadDashboard();
+		loadViewsChart();
+		loadTopVideos();
+		loadRecentStats();
+	</script>
+</body>
+</html>

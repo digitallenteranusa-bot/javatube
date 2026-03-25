@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Pengaturan 2FA - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.tfa-page { max-width:500px; margin:40px auto; padding:0 16px; }
+		.tfa-card { background:var(--bg-secondary); border-radius:12px; padding:32px; margin-bottom:20px; }
+		.tfa-card h1 { font-size:22px; margin-bottom:8px; }
+		.tfa-card p { color:var(--text-secondary); font-size:14px; line-height:1.6; }
+		.status-badge { display:inline-block; padding:4px 12px; border-radius:16px; font-size:13px; font-weight:600; }
+		.status-on { background:#1b5e20; color:#4caf50; }
+		.status-off { background:#4a1515; color:#f44336; }
+		.secret-box { background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:12px; font-family:monospace; font-size:14px; word-break:break-all; margin:16px 0; user-select:all; }
+		.qr-placeholder { background:white; border-radius:8px; padding:16px; text-align:center; margin:16px 0; }
+		.qr-placeholder img { max-width:200px; }
+		.code-input { display:flex; gap:8px; margin-top:16px; }
+		.code-input input { flex:1; padding:12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:18px; text-align:center; letter-spacing:8px; font-family:monospace; }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="tfa-page">
+		<div class="tfa-card">
+			<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+				<h1>Two-Factor Authentication</h1>
+				<span class="status-badge" id="status-badge">...</span>
+			</div>
+			<p>Lindungi akun kamu dengan verifikasi dua langkah menggunakan aplikasi authenticator (Google Authenticator, Authy, dll).</p>
+		</div>
+
+		<div id="setup-section" style="display:none">
+			<div class="tfa-card">
+				<h2 style="font-size:16px;margin-bottom:12px;">Setup 2FA</h2>
+				<p>1. Scan QR code di bawah atau masukkan secret key secara manual ke aplikasi authenticator kamu.</p>
+				<div class="qr-placeholder" id="qr-area"></div>
+				<p style="font-size:12px;">Secret key (backup):</p>
+				<div class="secret-box" id="secret-key"></div>
+				<p>2. Masukkan kode 6 digit dari aplikasi authenticator untuk mengaktifkan:</p>
+				<div class="code-input">
+					<input type="text" id="verify-code" maxlength="6" placeholder="000000">
+					<button class="btn btn-primary" onclick="enable2FA()">Aktifkan</button>
+				</div>
+			</div>
+		</div>
+
+		<div id="disable-section" style="display:none">
+			<div class="tfa-card">
+				<h2 style="font-size:16px;margin-bottom:12px;">Nonaktifkan 2FA</h2>
+				<p>Masukkan kode 6 digit dari aplikasi authenticator untuk menonaktifkan 2FA:</p>
+				<div class="code-input">
+					<input type="text" id="disable-code" maxlength="6" placeholder="000000">
+					<button class="btn btn-primary" style="background:#f44336" onclick="disable2FA()">Nonaktifkan</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		if (!isLoggedIn()) window.location.href = '/login';
+
+		let setupSecret = null;
+
+		async function loadStatus() {
+			const { ok, data } = await api('/api/auth/2fa/status');
+			if (!ok) return;
+			const enabled = data.data.enabled;
+			const badge = document.getElementById('status-badge');
+			badge.textContent = enabled ? 'Aktif' : 'Nonaktif';
+			badge.className = 'status-badge ' + (enabled ? 'status-on' : 'status-off');
+
+			if (enabled) {
+				document.getElementById('setup-section').style.display = 'none';
+				document.getElementById('disable-section').style.display = 'block';
+			} else {
+				document.getElementById('disable-section').style.display = 'none';
+				loadSetup();
+			}
+		}
+
+		async function loadSetup() {
+			const { ok, data } = await api('/api/auth/2fa/setup', { method: 'POST' });
+			if (!ok) return;
+			setupSecret = data.data.secret;
+			const otpAuthUrl = data.data.otpAuthUrl;
+
+			document.getElementById('secret-key').textContent = setupSecret;
+			// Use a QR code API to show the QR
+			const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpAuthUrl)}`;
+			document.getElementById('qr-area').innerHTML = `<img src="${qrUrl}" alt="QR Code" style="max-width:200px;">`;
+			document.getElementById('setup-section').style.display = 'block';
+		}
+
+		async function enable2FA() {
+			const code = document.getElementById('verify-code').value.trim();
+			if (code.length !== 6) return alert('Masukkan kode 6 digit');
+			const { ok, data } = await api('/api/auth/2fa/enable', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ secret: setupSecret, code }),
+			});
+			if (ok) {
+				alert('2FA berhasil diaktifkan!');
+				loadStatus();
+			} else {
+				alert(data.message || 'Kode tidak valid');
+			}
+		}
+
+		async function disable2FA() {
+			const code = document.getElementById('disable-code').value.trim();
+			if (code.length !== 6) return alert('Masukkan kode 6 digit');
+			const { ok, data } = await api('/api/auth/2fa/disable', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ code }),
+			});
+			if (ok) {
+				alert('2FA berhasil dinonaktifkan');
+				loadStatus();
+			} else {
+				alert(data.message || 'Kode tidak valid');
+			}
+		}
+
+		loadStatus();
+	</script>
+</body>
+</html>

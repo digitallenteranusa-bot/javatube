@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Cari Video - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.search-bar {
+			display: flex;
+			gap: 8px;
+			margin-bottom: 24px;
+		}
+		.search-bar input {
+			flex: 1;
+			padding: 10px 16px;
+			background: var(--bg-input);
+			border: 1px solid var(--border);
+			border-radius: 20px;
+			color: var(--text-primary);
+			font-size: 14px;
+			outline: none;
+		}
+		.search-bar input:focus { border-color: var(--accent); }
+		.search-bar button {
+			padding: 10px 24px;
+			border-radius: 20px;
+		}
+		.search-info {
+			color: var(--text-secondary);
+			font-size: 14px;
+			margin-bottom: 16px;
+		}
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="container">
+		<div class="search-bar">
+			<input type="text" id="search-input" placeholder="Cari video..." autofocus>
+			<button class="btn btn-primary" onclick="doSearch()">Cari</button>
+		</div>
+		<div id="search-info" class="search-info" style="display:none"></div>
+		<div id="video-grid" class="video-grid"></div>
+		<div id="empty" class="empty-state" style="display:none">
+			<h2>Video tidak ditemukan</h2>
+			<p>Coba kata kunci lain</p>
+		</div>
+		<div id="loading" style="display:none" class="status-processing">
+			<div class="spinner"></div>
+		</div>
+		<div id="load-more" class="end-message" style="display:none; cursor:pointer; color:var(--accent);" onclick="loadMore()">Muat lebih banyak</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		const grid = document.getElementById('video-grid');
+		const emptyEl = document.getElementById('empty');
+		const loadingEl = document.getElementById('loading');
+		const searchInfo = document.getElementById('search-info');
+		const loadMoreEl = document.getElementById('load-more');
+		const input = document.getElementById('search-input');
+
+		let currentPage = 1;
+		let currentQuery = '';
+		let hasMore = false;
+
+		// Pre-fill from URL
+		const urlQ = new URLSearchParams(window.location.search).get('q');
+		if (urlQ) {
+			input.value = urlQ;
+			doSearch();
+		}
+
+		input.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') doSearch();
+		});
+
+		async function doSearch() {
+			const q = input.value.trim();
+			if (!q) return;
+			currentQuery = q;
+			currentPage = 1;
+			grid.innerHTML = '';
+			emptyEl.style.display = 'none';
+			loadMoreEl.style.display = 'none';
+			loadingEl.style.display = 'block';
+
+			history.replaceState(null, '', '/search?q=' + encodeURIComponent(q));
+			await fetchResults(q, 1, false);
+		}
+
+		async function loadMore() {
+			await fetchResults(currentQuery, currentPage + 1, true);
+		}
+
+		async function fetchResults(q, page, append) {
+			loadingEl.style.display = 'block';
+			const { ok, data } = await api(`/api/videos/search?q=${encodeURIComponent(q)}&page=${page}&limit=12`);
+			loadingEl.style.display = 'none';
+
+			if (!ok) return;
+
+			const result = data.data;
+			const videos = result?.videos || [];
+			const pagination = result?.pagination;
+
+			searchInfo.style.display = 'block';
+			searchInfo.textContent = `${pagination?.total || 0} hasil untuk "${q}"`;
+
+			if (videos.length === 0 && !append) {
+				emptyEl.style.display = 'block';
+				return;
+			}
+
+			const html = videos.map(v => `
+				<div class="video-card" onclick="window.location.href='/watch?v=${v.id}'">
+					<img class="thumbnail" src="${v.thumbnail ? '/thumbnails/' + v.thumbnail : ''}" alt="${escapeHtml(v.title)}"
+						onerror="this.style.background='var(--bg-secondary)'">
+					<div class="info">
+						<div class="title">${escapeHtml(v.title)}</div>
+						<div class="meta">${escapeHtml(v.username)} &middot; ${formatViews(v.views)} &middot; ${formatDate(v.created_at)}</div>
+					</div>
+				</div>
+			`).join('');
+
+			if (append) {
+				grid.insertAdjacentHTML('beforeend', html);
+			} else {
+				grid.innerHTML = html;
+			}
+
+			currentPage = page;
+			hasMore = pagination && pagination.page < pagination.totalPages;
+			loadMoreEl.style.display = hasMore ? 'block' : 'none';
+		}
+
+		function escapeHtml(str) {
+			const d = document.createElement('div');
+			d.textContent = str || '';
+			return d.innerHTML;
+		}
+	</script>
+</body>
+</html>

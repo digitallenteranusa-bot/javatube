@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+	<style>
+		.quality-selector { display:flex; align-items:center; gap:8px; margin-top:8px; }
+		.quality-btn { padding:4px 12px; border:1px solid var(--border); border-radius:16px; background:var(--bg-secondary); color:var(--text-secondary); font-size:12px; cursor:pointer; }
+		.quality-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+		.quality-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+		.quality-label { font-size:12px; color:var(--text-secondary); }
+
+		.watch-page { display:flex; gap:24px; padding:16px; max-width:1400px; margin:0 auto; }
+		.watch-main { flex:1; min-width:0; }
+		.watch-sidebar { width:360px; flex-shrink:0; }
+		@media(max-width:1024px) { .watch-page { flex-direction:column; } .watch-sidebar { width:100%; } }
+
+		.channel-bar { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); margin-bottom:16px; }
+		.channel-info { display:flex; align-items:center; gap:12px; }
+		.channel-avatar { width:40px; height:40px; border-radius:50%; background:var(--bg-hover); object-fit:cover; }
+		.channel-name { font-weight:600; font-size:14px; }
+		.channel-name a { color:var(--text-primary); }
+		.channel-subs { font-size:12px; color:var(--text-secondary); }
+		.subscribe-btn { padding:8px 20px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; border:none; }
+		.subscribe-btn.subscribed { background:var(--bg-hover); color:var(--text-secondary); }
+		.subscribe-btn.not-subscribed { background:var(--accent); color:white; }
+
+		.like-bar { display:flex; align-items:center; gap:4px; margin-top:12px; }
+		.like-btn, .dislike-btn { display:flex; align-items:center; gap:4px; padding:6px 16px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-secondary); font-size:13px; cursor:pointer; }
+		.like-btn { border-radius:20px 0 0 20px; border-right:none; }
+		.dislike-btn { border-radius:0 20px 20px 0; }
+		.like-btn:hover, .dislike-btn:hover { background:var(--bg-hover); }
+		.like-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+		.dislike-btn.active { background:#666; color:white; border-color:#666; }
+		.save-btn { padding:6px 16px; border:1px solid var(--border); border-radius:20px; background:var(--bg-secondary); color:var(--text-secondary); font-size:13px; cursor:pointer; margin-left:8px; }
+		.save-btn:hover { background:var(--bg-hover); }
+
+		.comments-section { margin-top:24px; }
+		.comments-section h3 { font-size:16px; margin-bottom:16px; }
+		.comment-form { display:flex; gap:8px; margin-bottom:20px; }
+		.comment-form input { flex:1; padding:10px 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:20px; color:var(--text-primary); font-size:14px; outline:none; }
+		.comment-form input:focus { border-color:var(--accent); }
+		.comment-item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+		.comment-avatar { width:32px; height:32px; border-radius:50%; background:var(--bg-hover); flex-shrink:0; }
+		.comment-body { flex:1; }
+		.comment-header { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+		.comment-user { font-size:13px; font-weight:600; }
+		.comment-time { font-size:12px; color:var(--text-secondary); }
+		.comment-text { font-size:14px; line-height:1.5; }
+		.comment-actions { display:flex; gap:12px; margin-top:4px; }
+		.comment-action { font-size:12px; color:var(--text-secondary); cursor:pointer; }
+		.comment-action:hover { color:var(--text-primary); }
+		.comment-delete:hover { color:var(--error); }
+		.replies-container { margin-left:44px; }
+		.reply-form { display:flex; gap:8px; margin:8px 0; }
+		.reply-form input { flex:1; padding:6px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:16px; color:var(--text-primary); font-size:13px; outline:none; }
+
+		.video-actions { display:flex; gap:8px; margin-top:12px; }
+		.action-btn { padding:6px 14px; border:1px solid var(--border); border-radius:16px; background:var(--bg-secondary); color:var(--text-secondary); font-size:12px; cursor:pointer; }
+		.action-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+
+		.rec-card { display:flex; gap:8px; padding:8px 0; cursor:pointer; }
+		.rec-card:hover { opacity:0.8; }
+		.rec-thumb { width:168px; height:94px; border-radius:8px; background:var(--bg-hover); object-fit:cover; flex-shrink:0; }
+		.rec-info { flex:1; }
+		.rec-title { font-size:13px; font-weight:500; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+		.rec-meta { font-size:12px; color:var(--text-secondary); margin-top:4px; }
+		.sidebar-title { font-size:14px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="watch-page">
+		<div class="watch-main">
+			<div id="player-area">
+				<div class="status-processing" id="loading">
+					<div class="spinner"></div>
+					<p>Memuat video...</p>
+				</div>
+			</div>
+
+			<div id="quality-area"></div>
+
+			<div class="video-details" id="video-details" style="display:none">
+				<h1 id="video-title"></h1>
+				<div class="meta" id="video-meta"></div>
+
+				<div class="channel-bar" id="channel-bar" style="display:none">
+					<div class="channel-info">
+						<img class="channel-avatar" id="channel-avatar" src="" onerror="this.style.background='var(--bg-hover)'">
+						<div>
+							<div class="channel-name"><a id="channel-link" href="#"></a></div>
+							<div class="channel-subs" id="channel-subs"></div>
+						</div>
+					</div>
+					<div style="display:flex;align-items:center;gap:8px;">
+						<button class="subscribe-btn not-subscribed" id="subscribe-btn" style="display:none" onclick="toggleSubscribe()">Subscribe</button>
+					</div>
+				</div>
+
+				<div class="like-bar" id="like-bar">
+					<button class="like-btn" id="like-btn" onclick="doLike()">&#9650; <span id="like-count">0</span></button>
+					<button class="dislike-btn" id="dislike-btn" onclick="doDislike()">&#9660; <span id="dislike-count">0</span></button>
+					<button class="save-btn" onclick="addToWatchLater()">+ Watch Later</button>
+				</div>
+
+				<div class="description" id="video-description"></div>
+
+				<div class="video-actions" id="video-actions" style="display:none">
+					<button class="action-btn" onclick="editVideo()">Edit</button>
+					<button class="action-btn" onclick="deleteVideo()" style="color:var(--error)">Hapus</button>
+				</div>
+			</div>
+
+			<div class="comments-section" id="comments-section" style="display:none">
+				<h3 id="comments-title">Komentar</h3>
+				<div class="comment-form" id="comment-form" style="display:none">
+					<input type="text" id="comment-input" placeholder="Tulis komentar...">
+					<button class="btn btn-primary btn-sm" onclick="postComment()">Kirim</button>
+				</div>
+				<div id="comments-list"></div>
+				<div id="load-more-comments" style="display:none; text-align:center; padding:12px; cursor:pointer; color:var(--accent); font-size:13px;" onclick="loadMoreComments()">Muat komentar lainnya</div>
+			</div>
+		</div>
+
+		<div class="watch-sidebar" id="watch-sidebar">
+			<div class="sidebar-title">Video Lainnya</div>
+			<div id="recommendations"></div>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		const params = new URLSearchParams(window.location.search);
+		const videoId = params.get('v');
+		if (!videoId) window.location.href = '/';
+
+		let videoData = null;
+		let hlsInstance = null;
+		let commentPage = 1;
+		let isSubscribed = false;
+		let userReaction = null;
+
+		async function loadVideo() {
+			const { ok, data } = await api('/api/videos/' + videoId);
+			if (!ok || !data.data) {
+				document.getElementById('loading').innerHTML = '<p>Video tidak ditemukan</p>';
+				return;
+			}
+
+			videoData = data.data;
+			document.title = videoData.title + ' - GamanTube';
+
+			document.getElementById('video-title').textContent = videoData.title;
+			document.getElementById('video-meta').innerHTML =
+				`${formatViews(videoData.views)} &middot; ${formatDate(videoData.created_at)}` +
+				(videoData.duration ? ` &middot; ${formatDuration(videoData.duration)}` : '');
+			document.getElementById('video-description').textContent = videoData.description || 'Tidak ada deskripsi';
+			document.getElementById('video-details').style.display = 'block';
+
+			// Channel bar
+			const channelBar = document.getElementById('channel-bar');
+			channelBar.style.display = 'flex';
+			document.getElementById('channel-link').textContent = videoData.username;
+			document.getElementById('channel-link').href = '/channel/' + videoData.username;
+			if (videoData.avatar) {
+				document.getElementById('channel-avatar').src = '/avatars/' + videoData.avatar;
+			}
+
+			// Show edit/delete for owner
+			const user = getUser();
+			if (user && user.id === videoData.user_id) {
+				document.getElementById('video-actions').style.display = 'flex';
+			}
+
+			// Subscribe button
+			if (isLoggedIn() && user?.id !== videoData.user_id) {
+				const subBtn = document.getElementById('subscribe-btn');
+				subBtn.style.display = 'block';
+				const { ok: subOk, data: subData } = await api('/api/subscribe/' + videoData.user_id + '/status');
+				if (subOk) {
+					isSubscribed = subData.data.subscribed;
+					document.getElementById('channel-subs').textContent = subData.data.subscriberCount + ' subscriber';
+					updateSubBtn();
+				}
+			} else {
+				try {
+					const { data: subData } = await api('/api/subscribe/' + videoData.user_id + '/status');
+					document.getElementById('channel-subs').textContent = (subData.data?.subscriberCount || 0) + ' subscriber';
+				} catch {}
+			}
+
+			// Load like status
+			loadLikeStatus();
+
+			if (videoData.status === 'processing') {
+				document.getElementById('loading').innerHTML = '<div class="spinner"></div><p>Video sedang diproses...</p>';
+				setTimeout(loadVideo, 5000);
+				return;
+			}
+			if (videoData.status === 'failed') {
+				document.getElementById('loading').innerHTML = '<p style="color:var(--error)">Video gagal diproses</p>';
+				return;
+			}
+
+			// Player
+			document.getElementById('loading').style.display = 'none';
+			const container = document.createElement('div');
+			container.className = 'video-player-container';
+			const videoEl = document.createElement('video');
+			videoEl.controls = true;
+			videoEl.autoplay = true;
+			container.appendChild(videoEl);
+			document.getElementById('player-area').prepend(container);
+
+			const hlsUrl = `/stream/${videoId}/master.m3u8`;
+			if (Hls.isSupported()) {
+				const hls = new Hls({ startLevel: -1 });
+				hlsInstance = hls;
+				hls.loadSource(hlsUrl);
+				hls.attachMedia(videoEl);
+				hls.on(Hls.Events.MANIFEST_PARSED, (e, d) => {
+					if (d.levels.length > 1) buildQualitySelector(hls, d.levels);
+				});
+			} else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+				videoEl.src = hlsUrl;
+			}
+
+			fetch('/api/videos/' + videoId + '/view', { method: 'POST' });
+
+			// Load comments
+			document.getElementById('comments-section').style.display = 'block';
+			if (isLoggedIn()) document.getElementById('comment-form').style.display = 'flex';
+			loadComments(1);
+
+			// Load recommendations
+			loadRecommendations();
+		}
+
+		// Like/Dislike
+		async function loadLikeStatus() {
+			const { ok, data } = await api('/api/videos/' + videoId + '/like-status');
+			if (ok) {
+				document.getElementById('like-count').textContent = data.data.likes || 0;
+				document.getElementById('dislike-count').textContent = data.data.dislikes || 0;
+				userReaction = data.data.userReaction;
+				updateLikeButtons();
+			}
+		}
+
+		function updateLikeButtons() {
+			document.getElementById('like-btn').className = 'like-btn' + (userReaction === 'like' ? ' active' : '');
+			document.getElementById('dislike-btn').className = 'dislike-btn' + (userReaction === 'dislike' ? ' active' : '');
+		}
+
+		async function doLike() {
+			if (!isLoggedIn()) return window.location.href = '/login';
+			const { ok, data } = await api('/api/videos/' + videoId + '/like', { method: 'POST' });
+			if (ok) {
+				document.getElementById('like-count').textContent = data.data.likes;
+				document.getElementById('dislike-count').textContent = data.data.dislikes;
+				userReaction = data.data.userReaction;
+				updateLikeButtons();
+			}
+		}
+
+		async function doDislike() {
+			if (!isLoggedIn()) return window.location.href = '/login';
+			const { ok, data } = await api('/api/videos/' + videoId + '/dislike', { method: 'POST' });
+			if (ok) {
+				document.getElementById('like-count').textContent = data.data.likes;
+				document.getElementById('dislike-count').textContent = data.data.dislikes;
+				userReaction = data.data.userReaction;
+				updateLikeButtons();
+			}
+		}
+
+		async function addToWatchLater() {
+			if (!isLoggedIn()) return window.location.href = '/login';
+			const { ok, data } = await api('/api/playlists/watch-later', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ videoId }),
+			});
+			if (ok) alert(data.message || 'Ditambahkan ke Watch Later');
+			else alert(data.message || 'Gagal');
+		}
+
+		// Recommendations
+		async function loadRecommendations() {
+			const { ok, data } = await api('/api/videos/' + videoId + '/recommendations?limit=10');
+			if (!ok || !data.data) return;
+			const container = document.getElementById('recommendations');
+			container.innerHTML = data.data.map(v => `
+				<a href="/watch?v=${v.id}" class="rec-card" style="text-decoration:none;color:inherit;">
+					<img class="rec-thumb" src="${v.thumbnail ? '/thumbnails/' + v.thumbnail : ''}" onerror="this.style.background='var(--bg-hover)'">
+					<div class="rec-info">
+						<div class="rec-title">${escapeHtml(v.title)}</div>
+						<div class="rec-meta">${escapeHtml(v.username)}</div>
+						<div class="rec-meta">${formatViews(v.views)} &middot; ${formatDate(v.created_at)}</div>
+					</div>
+				</a>
+			`).join('');
+		}
+
+		function buildQualitySelector(hls, levels) {
+			const area = document.getElementById('quality-area');
+			const sel = document.createElement('div');
+			sel.className = 'quality-selector';
+			sel.innerHTML = '<span class="quality-label">Kualitas:</span>';
+			const autoBtn = document.createElement('button');
+			autoBtn.className = 'quality-btn active';
+			autoBtn.textContent = 'Auto';
+			autoBtn.onclick = () => { hls.currentLevel = -1; setActive(sel, autoBtn); };
+			sel.appendChild(autoBtn);
+			levels.forEach((l, i) => {
+				const btn = document.createElement('button');
+				btn.className = 'quality-btn';
+				btn.textContent = l.height + 'p';
+				btn.onclick = () => { hls.currentLevel = i; setActive(sel, btn); };
+				sel.appendChild(btn);
+			});
+			area.appendChild(sel);
+		}
+		function setActive(c, b) { c.querySelectorAll('.quality-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); }
+
+		// Subscribe
+		async function toggleSubscribe() {
+			if (!isLoggedIn()) return window.location.href = '/login';
+			const method = isSubscribed ? 'DELETE' : 'POST';
+			const { ok, data } = await api('/api/subscribe/' + videoData.user_id, { method });
+			if (ok) {
+				isSubscribed = data.data.subscribed;
+				document.getElementById('channel-subs').textContent = data.data.subscriberCount + ' subscriber';
+				updateSubBtn();
+			}
+		}
+		function updateSubBtn() {
+			const btn = document.getElementById('subscribe-btn');
+			btn.className = 'subscribe-btn ' + (isSubscribed ? 'subscribed' : 'not-subscribed');
+			btn.textContent = isSubscribed ? 'Subscribed' : 'Subscribe';
+		}
+
+		// Comments with nested replies
+		async function loadComments(page) {
+			const { ok, data } = await api(`/api/videos/${videoId}/comments?page=${page}`);
+			if (!ok) return;
+			const result = data.data;
+			const list = document.getElementById('comments-list');
+			document.getElementById('comments-title').textContent = `Komentar (${result.pagination.total})`;
+
+			const user = getUser();
+			const html = result.comments.map(c => renderComment(c, user)).join('');
+
+			if (page === 1) list.innerHTML = html;
+			else list.insertAdjacentHTML('beforeend', html);
+
+			commentPage = page;
+			document.getElementById('load-more-comments').style.display =
+				result.pagination.page < result.pagination.totalPages ? 'block' : 'none';
+		}
+
+		function renderComment(c, user) {
+			return `
+				<div class="comment-item" id="comment-${c.id}">
+					<div class="comment-avatar"></div>
+					<div class="comment-body">
+						<div class="comment-header">
+							<span class="comment-user"><a href="/channel/${escapeHtml(c.username)}" style="color:var(--text-primary)">${escapeHtml(c.username)}</a></span>
+							<span class="comment-time">${formatDate(c.created_at)}</span>
+						</div>
+						<div class="comment-text">${escapeHtml(c.content)}</div>
+						<div class="comment-actions">
+							${isLoggedIn() ? `<span class="comment-action" onclick="showReplyForm('${c.id}')">Balas</span>` : ''}
+							${c.reply_count > 0 ? `<span class="comment-action" onclick="loadReplies('${c.id}')">Lihat ${c.reply_count} balasan</span>` : ''}
+							${user && (user.id === c.user_id || user.role === 'admin') ? `<span class="comment-action comment-delete" onclick="deleteComment('${c.id}')">Hapus</span>` : ''}
+						</div>
+						<div id="replies-${c.id}" class="replies-container"></div>
+					</div>
+				</div>
+			`;
+		}
+
+		function showReplyForm(commentId) {
+			const container = document.getElementById('replies-' + commentId);
+			if (container.querySelector('.reply-form')) return;
+			container.insertAdjacentHTML('afterbegin', `
+				<div class="reply-form">
+					<input type="text" id="reply-input-${commentId}" placeholder="Tulis balasan..." onkeydown="if(event.key==='Enter')postReply('${commentId}')">
+					<button class="btn btn-primary btn-sm" onclick="postReply('${commentId}')">Balas</button>
+				</div>
+			`);
+			document.getElementById('reply-input-' + commentId).focus();
+		}
+
+		async function postReply(parentId) {
+			const input = document.getElementById('reply-input-' + parentId);
+			const content = input.value.trim();
+			if (!content) return;
+			const { ok } = await api(`/api/videos/${videoId}/comments`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ content, parentId }),
+			});
+			if (ok) {
+				input.value = '';
+				loadReplies(parentId);
+			}
+		}
+
+		async function loadReplies(commentId) {
+			const { ok, data } = await api('/api/comments/' + commentId + '/replies');
+			if (!ok) return;
+			const container = document.getElementById('replies-' + commentId);
+			const user = getUser();
+			const replyForm = container.querySelector('.reply-form');
+			const formHtml = replyForm ? replyForm.outerHTML : '';
+			container.innerHTML = formHtml + data.data.map(r => `
+				<div class="comment-item" id="comment-${r.id}" style="padding:8px 0;border:none;">
+					<div class="comment-avatar" style="width:24px;height:24px;"></div>
+					<div class="comment-body">
+						<div class="comment-header">
+							<span class="comment-user"><a href="/channel/${escapeHtml(r.username)}" style="color:var(--text-primary)">${escapeHtml(r.username)}</a></span>
+							<span class="comment-time">${formatDate(r.created_at)}</span>
+						</div>
+						<div class="comment-text">${escapeHtml(r.content)}</div>
+						<div class="comment-actions">
+							${user && (user.id === r.user_id || user.role === 'admin') ? `<span class="comment-action comment-delete" onclick="deleteComment('${r.id}')">Hapus</span>` : ''}
+						</div>
+					</div>
+				</div>
+			`).join('');
+		}
+
+		function loadMoreComments() { loadComments(commentPage + 1); }
+
+		async function postComment() {
+			const input = document.getElementById('comment-input');
+			const content = input.value.trim();
+			if (!content) return;
+			const { ok } = await api(`/api/videos/${videoId}/comments`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ content }),
+			});
+			if (ok) {
+				input.value = '';
+				loadComments(1);
+			}
+		}
+
+		document.getElementById('comment-input')?.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') postComment();
+		});
+
+		async function deleteComment(id) {
+			if (!confirm('Hapus komentar ini?')) return;
+			await api('/api/comments/' + id, { method: 'DELETE' });
+			document.getElementById('comment-' + id)?.remove();
+		}
+
+		// Edit / Delete video
+		function editVideo() {
+			const newTitle = prompt('Judul baru:', videoData.title);
+			if (newTitle === null) return;
+			const newDesc = prompt('Deskripsi baru:', videoData.description);
+			if (newDesc === null) return;
+			api('/api/videos/' + videoId, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ title: newTitle, description: newDesc }),
+			}).then(({ ok }) => { if (ok) location.reload(); });
+		}
+
+		async function deleteVideo() {
+			if (!confirm('Hapus video ini? Tindakan ini tidak bisa dibatalkan.')) return;
+			const { ok } = await api('/api/videos/' + videoId, { method: 'DELETE' });
+			if (ok) window.location.href = '/';
+		}
+
+		loadVideo();
+	</script>
+</body>
+</html>

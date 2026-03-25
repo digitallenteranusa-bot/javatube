@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Channel - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.channel-header { display:flex; align-items:center; gap:20px; padding:32px 0; border-bottom:1px solid var(--border); margin-bottom:24px; }
+		.channel-avatar-lg { width:80px; height:80px; border-radius:50%; background:var(--bg-hover); object-fit:cover; }
+		.channel-meta h1 { font-size:24px; margin-bottom:4px; }
+		.channel-meta .stats { font-size:14px; color:var(--text-secondary); margin-bottom:4px; }
+		.channel-meta .bio { font-size:14px; color:var(--text-secondary); margin-top:8px; line-height:1.5; }
+		.channel-actions { margin-left:auto; }
+		.subscribe-btn { padding:10px 24px; border-radius:20px; font-size:14px; font-weight:600; cursor:pointer; border:none; }
+		.subscribe-btn.subscribed { background:var(--bg-hover); color:var(--text-secondary); }
+		.subscribe-btn.not-subscribed { background:var(--accent); color:white; }
+		.section-title { font-size:18px; margin-bottom:16px; }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="container">
+		<div id="loading" class="status-processing">
+			<div class="spinner"></div>
+		</div>
+		<div id="channel-content" style="display:none">
+			<div class="channel-header">
+				<img class="channel-avatar-lg" id="avatar" src="" onerror="this.style.background='var(--bg-hover)'">
+				<div class="channel-meta">
+					<h1 id="channel-name"></h1>
+					<div class="stats" id="channel-stats"></div>
+					<div class="bio" id="channel-bio"></div>
+				</div>
+				<div class="channel-actions" id="channel-actions"></div>
+			</div>
+			<h2 class="section-title">Video</h2>
+			<div id="video-grid" class="video-grid"></div>
+			<div id="empty" class="empty-state" style="display:none">
+				<p>Belum ada video</p>
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		const username = window.location.pathname.split('/channel/')[1];
+		if (!username) window.location.href = '/';
+
+		let channelData = null;
+		let isSubscribed = false;
+
+		async function loadChannel() {
+			const { ok, data } = await api('/api/channel/' + encodeURIComponent(username));
+			document.getElementById('loading').style.display = 'none';
+
+			if (!ok || !data.data) {
+				document.getElementById('loading').style.display = 'block';
+				document.getElementById('loading').innerHTML = '<p>Channel tidak ditemukan</p>';
+				return;
+			}
+
+			channelData = data.data;
+			isSubscribed = channelData.subscribed;
+			document.title = (channelData.display_name || channelData.username) + ' - GamanTube';
+
+			document.getElementById('channel-content').style.display = 'block';
+			document.getElementById('channel-name').textContent = channelData.display_name || channelData.username;
+			document.getElementById('channel-stats').textContent =
+				`@${channelData.username} · ${channelData.subscriber_count} subscriber · ${channelData.video_count} video`;
+			document.getElementById('channel-bio').textContent = channelData.bio || '';
+
+			if (channelData.avatar) {
+				document.getElementById('avatar').src = '/avatars/' + channelData.avatar;
+			}
+
+			// Subscribe button
+			const user = getUser();
+			const actions = document.getElementById('channel-actions');
+			if (isLoggedIn() && user?.id !== channelData.id) {
+				actions.innerHTML = `<button class="subscribe-btn ${isSubscribed ? 'subscribed' : 'not-subscribed'}" id="sub-btn" onclick="toggleSub()">${isSubscribed ? 'Subscribed' : 'Subscribe'}</button>`;
+			} else if (user?.id === channelData.id) {
+				actions.innerHTML = '<a href="/profile" class="btn btn-outline">Edit Profil</a>';
+			}
+
+			// Videos
+			const videos = channelData.videos || [];
+			if (videos.length === 0) {
+				document.getElementById('empty').style.display = 'block';
+			} else {
+				document.getElementById('video-grid').innerHTML = videos.map(v => `
+					<div class="video-card" onclick="window.location.href='/watch?v=${v.id}'">
+						<img class="thumbnail" src="${v.thumbnail ? '/thumbnails/' + v.thumbnail : ''}" alt="${escapeHtml(v.title)}"
+							onerror="this.style.background='var(--bg-secondary)'">
+						<div class="info">
+							<div class="title">${escapeHtml(v.title)}</div>
+							<div class="meta">${formatViews(v.views)} · ${formatDate(v.created_at)}</div>
+						</div>
+					</div>
+				`).join('');
+			}
+		}
+
+		async function toggleSub() {
+			if (!isLoggedIn()) return window.location.href = '/login';
+			const method = isSubscribed ? 'DELETE' : 'POST';
+			const { ok, data } = await api('/api/subscribe/' + channelData.id, { method });
+			if (ok) {
+				isSubscribed = data.data.subscribed;
+				const btn = document.getElementById('sub-btn');
+				btn.className = 'subscribe-btn ' + (isSubscribed ? 'subscribed' : 'not-subscribed');
+				btn.textContent = isSubscribed ? 'Subscribed' : 'Subscribe';
+				document.getElementById('channel-stats').textContent =
+					`@${channelData.username} · ${data.data.subscriberCount} subscriber · ${channelData.video_count} video`;
+			}
+		}
+
+		loadChannel();
+	</script>
+</body>
+</html>

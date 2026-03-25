@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Notifikasi - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.notif-page { max-width:700px; margin:0 auto; }
+		.notif-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+		.notif-item { display:flex; gap:12px; padding:14px; border-radius:8px; cursor:pointer; transition:background 0.2s; border-bottom:1px solid var(--border); }
+		.notif-item:hover { background:var(--bg-hover); }
+		.notif-item.unread { background:rgba(255,68,68,0.05); }
+		.notif-icon { width:40px; height:40px; border-radius:50%; background:var(--bg-hover); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+		.notif-icon.new_video { background:rgba(255,68,68,0.2); }
+		.notif-icon.comment { background:rgba(76,175,80,0.2); }
+		.notif-icon.subscribe { background:rgba(33,150,243,0.2); }
+		.notif-body { flex:1; }
+		.notif-title { font-size:14px; font-weight:500; margin-bottom:2px; }
+		.notif-msg { font-size:13px; color:var(--text-secondary); }
+		.notif-time { font-size:12px; color:var(--text-secondary); margin-top:4px; }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="container notif-page">
+		<div class="notif-header">
+			<h1 style="font-size:20px">Notifikasi</h1>
+			<button class="btn btn-outline btn-sm" onclick="markAllRead()">Tandai semua dibaca</button>
+		</div>
+		<div id="notif-list"></div>
+		<div id="empty" class="empty-state" style="display:none">
+			<p>Belum ada notifikasi</p>
+		</div>
+		<div id="loading" class="status-processing">
+			<div class="spinner"></div>
+		</div>
+		<div id="load-more" style="display:none; text-align:center; padding:16px; cursor:pointer; color:var(--accent);" onclick="loadMore()">Muat lebih banyak</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		if (!isLoggedIn()) window.location.href = '/login';
+
+		const icons = { new_video: '&#9654;', comment: '&#128172;', subscribe: '&#128101;' };
+		let currentPage = 1;
+
+		async function loadNotifs(page) {
+			const { ok, data } = await api('/api/notifications?page=' + page);
+			document.getElementById('loading').style.display = 'none';
+			if (!ok) return;
+
+			const result = data.data;
+			const notifs = result.notifications || [];
+
+			if (page === 1 && notifs.length === 0) {
+				document.getElementById('empty').style.display = 'block';
+				return;
+			}
+
+			const html = notifs.map(n => `
+				<div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="openNotif('${n.id}', '${n.link || '/'}')">
+					<div class="notif-icon ${n.type}">${icons[n.type] || '&#128276;'}</div>
+					<div class="notif-body">
+						<div class="notif-title">${escapeHtml(n.title)}</div>
+						<div class="notif-msg">${escapeHtml(n.message)}</div>
+						<div class="notif-time">${formatDate(n.created_at)}</div>
+					</div>
+				</div>
+			`).join('');
+
+			const list = document.getElementById('notif-list');
+			if (page === 1) list.innerHTML = html;
+			else list.insertAdjacentHTML('beforeend', html);
+
+			currentPage = page;
+			document.getElementById('load-more').style.display =
+				result.pagination.page < result.pagination.totalPages ? 'block' : 'none';
+		}
+
+		async function openNotif(id, link) {
+			await api('/api/notifications/' + id + '/read', { method: 'POST' });
+			window.location.href = link || '/';
+		}
+
+		async function markAllRead() {
+			await api('/api/notifications/read-all', { method: 'POST' });
+			document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+			const badge = document.getElementById('notif-badge');
+			if (badge) badge.style.display = 'none';
+		}
+
+		function loadMore() { loadNotifs(currentPage + 1); }
+
+		loadNotifs(1);
+	</script>
+</body>
+</html>

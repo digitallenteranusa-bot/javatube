@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(cmd.exe /c \"where bun\" 2>/dev/null)"
+    ]
+  }
+}

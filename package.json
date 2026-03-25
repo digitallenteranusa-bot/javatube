@@ -1,0 +1,77 @@
+{
+	"name": "gaman",
+	"description": "A Lean Framework for Heavy-Duty Enterprise Performance.",
+	"version": "2.0.2",
+	"author": {
+		"name": "Angga7Togk",
+		"url": "https://github.com/angga7togk"
+	},
+	"main": "./dist/index.js",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		"./package.json": "./package.json",
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		},
+		"./types": {
+			"types": "./dist/types.d.ts",
+			"import": "./dist/types.mjs",
+			"require": "./dist/types.js"
+		},
+		"./responder": {
+			"types": "./dist/responder.d.ts",
+			"import": "./dist/responder.mjs",
+			"require": "./dist/responder.js"
+		},
+		"./compose": {
+			"types": "./dist/compose/index.d.ts",
+			"import": "./dist/compose/index.mjs",
+			"require": "./dist/compose/index.js"
+		},
+		"./utils": {
+			"types": "./dist/utils/index.d.ts",
+			"import": "./dist/utils/index.mjs",
+			"require": "./dist/utils/index.js"
+		},
+		"./formdata": {
+			"types": "./dist/context/formdata/index.d.ts",
+			"import": "./dist/context/formdata/index.mjs",
+			"require": "./dist/context/formdata/index.js"
+		},
+		"./header": {
+			"types": "./dist/context/header/index.d.ts",
+			"import": "./dist/context/header/index.mjs",
+			"require": "./dist/context/header/index.js"
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/GamanJS/gaman.git"
+	},
+	"bugs": "https://github.com/GamanJS/gaman/issues",
+	"license": "MIT",
+	"homepage": "https://github.com/GamanJS/gaman",
+	"keywords": [
+		"gamanjs",
+		"gaman",
+		"bun",
+		"http",
+		"web",
+		"framework"
+	],
+	"scripts": {
+		"release": "bun build.ts && bun test && npm publish --access public"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"esbuild-fix-imports-plugin": "^1.0.23",
+		"tsup": "^8.5.1",
+		"typescript": "^5.9.3"
+	},
+	"peerDependencies": {
+		"@gaman/michi": "^0.1.2"
+	}
+}

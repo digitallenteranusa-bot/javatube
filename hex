@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Cek apakah user masukin string atau nggak
+if [ -z "$1" ]; then
+    echo "Usage: ./hex.sh <string>"
+    exit 1
+fi
+
+# -n biar gak ada baris baru (newline) yang ikut kehitung
+echo -n "$1" | hexdump -C

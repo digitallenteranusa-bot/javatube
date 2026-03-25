@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Verifikasi Email - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.verify-page { max-width:480px; margin:80px auto; padding:0 16px; text-align:center; }
+		.verify-card { background:var(--bg-secondary); border-radius:12px; padding:40px 32px; }
+		.verify-icon { font-size:48px; margin-bottom:16px; }
+		.verify-card h1 { font-size:22px; margin-bottom:12px; }
+		.verify-card p { color:var(--text-secondary); font-size:14px; line-height:1.6; }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="verify-page">
+		<div class="verify-card" id="verify-card">
+			<div class="verify-icon">&#9203;</div>
+			<h1>Memverifikasi email...</h1>
+			<p>Mohon tunggu sebentar.</p>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		const params = new URLSearchParams(window.location.search);
+		const token = params.get('token');
+
+		async function verify() {
+			const card = document.getElementById('verify-card');
+			if (!token) {
+				card.innerHTML = '<div class="verify-icon">&#10060;</div><h1>Token Tidak Valid</h1><p>Link verifikasi tidak valid.</p><a href="/" class="btn btn-primary" style="margin-top:16px;display:inline-block;">Kembali ke Beranda</a>';
+				return;
+			}
+
+			const { ok, data } = await api('/api/auth/verify-email', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ token }),
+			});
+
+			if (ok) {
+				card.innerHTML = '<div class="verify-icon">&#9989;</div><h1>Email Terverifikasi!</h1><p>Email kamu berhasil diverifikasi. Kamu sekarang bisa menggunakan semua fitur GamanTube.</p><a href="/" class="btn btn-primary" style="margin-top:16px;display:inline-block;">Kembali ke Beranda</a>';
+			} else {
+				card.innerHTML = `<div class="verify-icon">&#10060;</div><h1>Verifikasi Gagal</h1><p>${data.message || 'Token tidak valid atau sudah kadaluarsa.'}</p><a href="/" class="btn btn-primary" style="margin-top:16px;display:inline-block;">Kembali ke Beranda</a>`;
+			}
+		}
+
+		verify();
+	</script>
+</body>
+</html>

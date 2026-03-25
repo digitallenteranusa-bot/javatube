@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Playlist - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.playlist-page { max-width:900px; margin:24px auto; padding:0 16px; }
+		.playlist-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+		.playlist-list { display:flex; flex-direction:column; gap:12px; }
+		.playlist-card { background:var(--bg-secondary); border-radius:12px; padding:16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+		.playlist-card:hover { background:var(--bg-hover); }
+		.pl-info h3 { font-size:16px; margin-bottom:4px; }
+		.pl-info p { font-size:13px; color:var(--text-secondary); }
+		.pl-actions { display:flex; gap:8px; }
+		.pl-badge { font-size:11px; padding:2px 8px; border-radius:10px; background:var(--bg-hover); color:var(--text-secondary); }
+
+		.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:100; align-items:center; justify-content:center; }
+		.modal-overlay.active { display:flex; }
+		.modal { background:var(--bg-secondary); border-radius:12px; padding:24px; width:90%; max-width:400px; }
+		.modal h2 { margin-bottom:16px; font-size:18px; }
+		.modal .form-group { margin-bottom:12px; }
+		.modal label { display:block; font-size:13px; color:var(--text-secondary); margin-bottom:4px; }
+		.modal input, .modal textarea { width:100%; padding:10px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:14px; }
+		.modal textarea { height:80px; resize:vertical; }
+		.modal .form-row { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+		.checkbox-row { display:flex; align-items:center; gap:8px; }
+		.checkbox-row input { width:auto; }
+
+		.detail-items { margin-top:16px; }
+		.detail-item { display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+		.detail-item img { width:120px; height:68px; border-radius:6px; object-fit:cover; background:var(--bg-hover); }
+		.detail-item-info { flex:1; }
+		.detail-item-info h4 { font-size:14px; margin-bottom:4px; }
+		.detail-item-info p { font-size:12px; color:var(--text-secondary); }
+		.detail-item .remove-btn { color:var(--text-secondary); cursor:pointer; font-size:20px; padding:4px 8px; }
+		.detail-item .remove-btn:hover { color:var(--error); }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="playlist-page">
+		<div id="list-view">
+			<div class="playlist-header">
+				<h1>Playlist Saya</h1>
+				<button class="btn btn-primary" onclick="showCreateModal()">+ Buat Playlist</button>
+			</div>
+			<div class="playlist-list" id="playlist-list"></div>
+		</div>
+
+		<div id="detail-view" style="display:none">
+			<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+				<button class="btn btn-outline btn-sm" onclick="backToList()">&larr; Kembali</button>
+				<h1 id="detail-title" style="flex:1;font-size:20px;"></h1>
+				<button class="btn btn-outline btn-sm" id="edit-pl-btn" onclick="editPlaylist()">Edit</button>
+				<button class="btn btn-outline btn-sm" style="color:var(--error)" id="delete-pl-btn" onclick="deletePlaylist()">Hapus</button>
+			</div>
+			<p id="detail-desc" style="color:var(--text-secondary);font-size:14px;margin-bottom:8px;"></p>
+			<div class="detail-items" id="detail-items"></div>
+		</div>
+	</div>
+
+	<div class="modal-overlay" id="create-modal">
+		<div class="modal">
+			<h2 id="modal-title">Buat Playlist</h2>
+			<div class="form-group">
+				<label>Judul</label>
+				<input type="text" id="pl-title">
+			</div>
+			<div class="form-group">
+				<label>Deskripsi</label>
+				<textarea id="pl-desc"></textarea>
+			</div>
+			<div class="form-group">
+				<div class="checkbox-row">
+					<input type="checkbox" id="pl-public" checked>
+					<label for="pl-public" style="margin:0">Publik</label>
+				</div>
+			</div>
+			<div class="form-row">
+				<button class="btn btn-outline" onclick="hideModal()">Batal</button>
+				<button class="btn btn-primary" id="modal-submit" onclick="submitPlaylist()">Buat</button>
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		if (!isLoggedIn()) window.location.href = '/login';
+
+		let playlists = [];
+		let currentPl = null;
+		let editingId = null;
+
+		async function loadPlaylists() {
+			const { ok, data } = await api('/api/playlists');
+			if (!ok) return;
+			playlists = data.data || [];
+			renderPlaylists();
+		}
+
+		function renderPlaylists() {
+			const list = document.getElementById('playlist-list');
+			if (!playlists.length) {
+				list.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:40px;">Belum ada playlist. Buat playlist pertama kamu!</p>';
+				return;
+			}
+			list.innerHTML = playlists.map(p => `
+				<div class="playlist-card" onclick="viewPlaylist('${p.id}')">
+					<div class="pl-info">
+						<h3>${escapeHtml(p.title)}</h3>
+						<p>${p.item_count || 0} video &middot; ${p.is_public ? 'Publik' : 'Privat'} &middot; ${formatDate(p.created_at)}</p>
+					</div>
+					<span class="pl-badge">${p.is_public ? 'Publik' : 'Privat'}</span>
+				</div>
+			`).join('');
+		}
+
+		async function viewPlaylist(id) {
+			const { ok, data } = await api('/api/playlists/' + id);
+			if (!ok) return;
+			currentPl = data.data;
+			document.getElementById('list-view').style.display = 'none';
+			document.getElementById('detail-view').style.display = 'block';
+			document.getElementById('detail-title').textContent = currentPl.title;
+			document.getElementById('detail-desc').textContent = currentPl.description || '';
+			renderItems();
+		}
+
+		function renderItems() {
+			const items = currentPl.items || [];
+			const container = document.getElementById('detail-items');
+			if (!items.length) {
+				container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:24px;">Playlist kosong</p>';
+				return;
+			}
+			container.innerHTML = items.map(item => `
+				<div class="detail-item">
+					<a href="/watch?v=${item.video_id}">
+						<img src="${item.thumbnail ? '/thumbnails/' + item.thumbnail : ''}" onerror="this.style.background='var(--bg-hover)'">
+					</a>
+					<div class="detail-item-info">
+						<h4><a href="/watch?v=${item.video_id}" style="color:var(--text-primary)">${escapeHtml(item.title)}</a></h4>
+						<p>${escapeHtml(item.username)} &middot; ${formatViews(item.views)} &middot; ${item.duration ? formatDuration(item.duration) : ''}</p>
+					</div>
+					<span class="remove-btn" onclick="removeItem('${item.video_id}')">&times;</span>
+				</div>
+			`).join('');
+		}
+
+		async function removeItem(videoId) {
+			if (!confirm('Hapus video dari playlist?')) return;
+			await api(`/api/playlists/${currentPl.id}/items/${videoId}`, { method: 'DELETE' });
+			viewPlaylist(currentPl.id);
+		}
+
+		function backToList() {
+			document.getElementById('list-view').style.display = 'block';
+			document.getElementById('detail-view').style.display = 'none';
+			currentPl = null;
+			loadPlaylists();
+		}
+
+		function showCreateModal() {
+			editingId = null;
+			document.getElementById('modal-title').textContent = 'Buat Playlist';
+			document.getElementById('modal-submit').textContent = 'Buat';
+			document.getElementById('pl-title').value = '';
+			document.getElementById('pl-desc').value = '';
+			document.getElementById('pl-public').checked = true;
+			document.getElementById('create-modal').classList.add('active');
+		}
+
+		function editPlaylist() {
+			if (!currentPl) return;
+			editingId = currentPl.id;
+			document.getElementById('modal-title').textContent = 'Edit Playlist';
+			document.getElementById('modal-submit').textContent = 'Simpan';
+			document.getElementById('pl-title').value = currentPl.title;
+			document.getElementById('pl-desc').value = currentPl.description || '';
+			document.getElementById('pl-public').checked = !!currentPl.is_public;
+			document.getElementById('create-modal').classList.add('active');
+		}
+
+		function hideModal() {
+			document.getElementById('create-modal').classList.remove('active');
+		}
+
+		async function submitPlaylist() {
+			const title = document.getElementById('pl-title').value.trim();
+			const description = document.getElementById('pl-desc').value.trim();
+			const isPublic = document.getElementById('pl-public').checked;
+			if (!title) return alert('Judul wajib diisi');
+
+			const body = JSON.stringify({ title, description, isPublic });
+			const headers = { 'Content-Type': 'application/json' };
+
+			if (editingId) {
+				await api('/api/playlists/' + editingId, { method: 'PUT', headers, body });
+				hideModal();
+				viewPlaylist(editingId);
+			} else {
+				await api('/api/playlists', { method: 'POST', headers, body });
+				hideModal();
+				loadPlaylists();
+			}
+		}
+
+		async function deletePlaylist() {
+			if (!currentPl || !confirm('Hapus playlist ini?')) return;
+			await api('/api/playlists/' + currentPl.id, { method: 'DELETE' });
+			backToList();
+		}
+
+		loadPlaylists();
+	</script>
+</body>
+</html>

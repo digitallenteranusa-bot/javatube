@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Live Streaming - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+	<style>
+		.live-page { max-width:1000px; margin:24px auto; padding:0 16px; }
+		.live-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px; margin-top:24px; }
+		.live-card { background:var(--bg-secondary); border-radius:12px; overflow:hidden; cursor:pointer; }
+		.live-card:hover { opacity:0.9; }
+		.live-card .thumb { width:100%; height:180px; background:var(--bg-hover); display:flex; align-items:center; justify-content:center; position:relative; }
+		.live-badge { position:absolute; top:8px; left:8px; background:#f00; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; }
+		.live-card .info { padding:12px; }
+		.live-card .info h3 { font-size:15px; margin-bottom:4px; }
+		.live-card .info p { font-size:13px; color:var(--text-secondary); }
+
+		.go-live-section { background:var(--bg-secondary); border-radius:12px; padding:24px; margin-top:24px; }
+		.go-live-section h2 { font-size:18px; margin-bottom:16px; }
+		.stream-key-box { display:flex; gap:8px; align-items:center; margin:12px 0; }
+		.stream-key-box input { flex:1; padding:10px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-family:monospace; font-size:13px; }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="live-page">
+		<h1>Live Streaming</h1>
+
+		<div class="live-grid" id="live-grid">
+			<p style="color:var(--text-secondary); grid-column:1/-1; text-align:center; padding:40px;">Memuat...</p>
+		</div>
+
+		<div class="go-live-section" id="go-live" style="display:none">
+			<h2>Mulai Live Stream</h2>
+			<p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px;">Gunakan OBS atau streaming software lain dengan stream key di bawah ini.</p>
+
+			<div class="stream-key-box">
+				<input type="password" id="stream-key" readonly placeholder="Belum ada stream key">
+				<button class="btn btn-outline btn-sm" onclick="toggleKeyVisibility()">Lihat</button>
+				<button class="btn btn-primary btn-sm" onclick="generateKey()">Generate Key</button>
+			</div>
+
+			<div style="margin-top:16px;">
+				<div class="form-group" style="margin-bottom:12px;">
+					<label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:4px;">Judul Stream</label>
+					<input type="text" id="stream-title" class="form-control" placeholder="Judul live stream kamu" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+				</div>
+				<div class="form-group" style="margin-bottom:12px;">
+					<label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:4px;">Deskripsi</label>
+					<input type="text" id="stream-desc" class="form-control" placeholder="Deskripsi (opsional)" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+				</div>
+				<button class="btn btn-primary" onclick="startLive()">Mulai Live</button>
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		async function loadStreams() {
+			const { ok, data } = await api('/api/live/streams');
+			if (!ok) return;
+			const streams = data.data || [];
+			const grid = document.getElementById('live-grid');
+			if (!streams.length) {
+				grid.innerHTML = '<p style="color:var(--text-secondary); grid-column:1/-1; text-align:center; padding:40px;">Tidak ada live stream saat ini</p>';
+			} else {
+				grid.innerHTML = streams.map(s => `
+					<div class="live-card" onclick="window.location.href='/watch?v=${s.id}'">
+						<div class="thumb">
+							<span class="live-badge">LIVE</span>
+							<span style="font-size:24px;">&#9654;</span>
+						</div>
+						<div class="info">
+							<h3>${escapeHtml(s.title)}</h3>
+							<p>${escapeHtml(s.username)}</p>
+						</div>
+					</div>
+				`).join('');
+			}
+		}
+
+		async function loadStreamKey() {
+			if (!isLoggedIn()) return;
+			document.getElementById('go-live').style.display = 'block';
+			const { ok, data } = await api('/api/live/stream-key');
+			if (ok && data.data?.streamKey) {
+				document.getElementById('stream-key').value = data.data.streamKey;
+			}
+		}
+
+		async function generateKey() {
+			const { ok, data } = await api('/api/live/stream-key', { method: 'POST' });
+			if (ok) {
+				document.getElementById('stream-key').value = data.data.streamKey;
+				alert('Stream key baru berhasil dibuat');
+			}
+		}
+
+		function toggleKeyVisibility() {
+			const input = document.getElementById('stream-key');
+			input.type = input.type === 'password' ? 'text' : 'password';
+		}
+
+		async function startLive() {
+			const title = document.getElementById('stream-title').value.trim();
+			if (!title) return alert('Judul wajib diisi');
+			const description = document.getElementById('stream-desc').value.trim();
+			const { ok, data } = await api('/api/live/start', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ title, description }),
+			});
+			if (ok) {
+				alert('Live stream dimulai! Video ID: ' + data.data.videoId);
+				loadStreams();
+			}
+		}
+
+		loadStreams();
+		loadStreamKey();
+	</script>
+</body>
+</html>

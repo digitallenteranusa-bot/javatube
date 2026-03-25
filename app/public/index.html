@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.load-more-area {
+			text-align: center;
+			padding: 24px;
+		}
+		.load-more-spinner {
+			display: inline-block;
+			width: 24px;
+			height: 24px;
+			border: 3px solid var(--border);
+			border-top-color: var(--accent);
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+		}
+		.end-message {
+			color: var(--text-secondary);
+			font-size: 14px;
+			padding: 24px;
+			text-align: center;
+		}
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="container">
+		<div id="video-grid" class="video-grid"></div>
+		<div id="empty" class="empty-state" style="display:none">
+			<h2>Belum ada video</h2>
+			<p>Jadilah yang pertama mengupload video!</p>
+		</div>
+		<div id="loading" class="status-processing">
+			<div class="spinner"></div>
+			<p>Memuat video...</p>
+		</div>
+		<div id="load-more-area" class="load-more-area" style="display:none">
+			<div class="load-more-spinner" id="load-more-spinner"></div>
+		</div>
+		<div id="end-message" class="end-message" style="display:none">
+			Semua video sudah ditampilkan
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		const grid = document.getElementById('video-grid');
+		const empty = document.getElementById('empty');
+		const loading = document.getElementById('loading');
+		const loadMoreArea = document.getElementById('load-more-area');
+		const endMessage = document.getElementById('end-message');
+
+		let currentPage = 1;
+		const perPage = 12;
+		let isLoading = false;
+		let hasMore = true;
+
+		function renderVideoCard(v) {
+			return `
+				<div class="video-card" onclick="window.location.href='/watch?v=${v.id}'">
+					<img class="thumbnail"
+						src="${v.thumbnail ? '/thumbnails/' + v.thumbnail : ''}"
+						alt="${escapeHtml(v.title)}"
+						onerror="this.style.background='var(--bg-secondary)'; this.alt='No thumbnail'">
+					<div class="info">
+						<div class="title">${escapeHtml(v.title)}</div>
+						<div class="meta">${escapeHtml(v.username)} &middot; ${formatViews(v.views)} &middot; ${formatDate(v.created_at)}</div>
+					</div>
+				</div>
+			`;
+		}
+
+		async function loadVideos(page) {
+			if (isLoading || !hasMore) return;
+			isLoading = true;
+
+			if (page > 1) {
+				loadMoreArea.style.display = 'block';
+			}
+
+			const { ok, data } = await api(`/api/videos?page=${page}&limit=${perPage}`);
+
+			loading.style.display = 'none';
+			loadMoreArea.style.display = 'none';
+
+			if (!ok) {
+				if (page === 1) empty.style.display = 'block';
+				isLoading = false;
+				return;
+			}
+
+			const result = data.data;
+			const videos = result?.videos || [];
+			const pagination = result?.pagination;
+
+			if (page === 1 && videos.length === 0) {
+				empty.style.display = 'block';
+				hasMore = false;
+				isLoading = false;
+				return;
+			}
+
+			// Append video cards
+			grid.insertAdjacentHTML('beforeend', videos.map(renderVideoCard).join(''));
+
+			// Check if there are more pages
+			if (pagination && pagination.page >= pagination.totalPages) {
+				hasMore = false;
+				if (pagination.total > perPage) {
+					endMessage.style.display = 'block';
+				}
+			}
+
+			currentPage = page;
+			isLoading = false;
+		}
+
+		function escapeHtml(str) {
+			const d = document.createElement('div');
+			d.textContent = str || '';
+			return d.innerHTML;
+		}
+
+		// Infinite scroll - load more when near bottom
+		function onScroll() {
+			if (isLoading || !hasMore) return;
+
+			const scrollBottom = window.innerHeight + window.scrollY;
+			const threshold = document.documentElement.offsetHeight - 300;
+
+			if (scrollBottom >= threshold) {
+				loadVideos(currentPage + 1);
+			}
+		}
+
+		window.addEventListener('scroll', onScroll);
+
+		// Initial load
+		loadVideos(1);
+	</script>
+</body>
+</html>

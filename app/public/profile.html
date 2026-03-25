@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Edit Profil - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.profile-page { max-width:500px; margin:40px auto; }
+		.avatar-section { display:flex; align-items:center; gap:16px; margin-bottom:24px; padding:20px; background:var(--bg-secondary); border-radius:12px; border:1px solid var(--border); }
+		.avatar-preview { width:80px; height:80px; border-radius:50%; background:var(--bg-hover); object-fit:cover; }
+		.avatar-actions { flex:1; }
+		.avatar-actions p { font-size:13px; color:var(--text-secondary); margin-top:4px; }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="container profile-page">
+		<div class="form-page" style="max-width:100%">
+			<h1>Edit Profil</h1>
+
+			<div class="avatar-section">
+				<img class="avatar-preview" id="avatar-preview" src="" onerror="this.style.background='var(--bg-hover)'">
+				<div class="avatar-actions">
+					<input type="file" id="avatar-input" accept="image/*" style="display:none">
+					<button class="btn btn-outline btn-sm" onclick="document.getElementById('avatar-input').click()">Ganti Avatar</button>
+					<p>JPG, PNG, atau WebP</p>
+				</div>
+			</div>
+
+			<form id="profile-form">
+				<div class="form-group">
+					<label>Username</label>
+					<input type="text" id="username" disabled style="opacity:0.6">
+				</div>
+				<div class="form-group">
+					<label>Email</label>
+					<input type="email" id="email" disabled style="opacity:0.6">
+				</div>
+				<div class="form-group">
+					<label for="display_name">Nama Tampilan</label>
+					<input type="text" id="display_name" placeholder="Nama yang ditampilkan di channel">
+				</div>
+				<div class="form-group">
+					<label for="bio">Bio</label>
+					<textarea id="bio" placeholder="Ceritakan tentang channel kamu..." rows="4"></textarea>
+				</div>
+				<button type="submit" class="btn btn-primary form-submit">Simpan</button>
+			</form>
+
+			<div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+				<h2 style="font-size:16px;margin-bottom:12px;">Pengaturan Lainnya</h2>
+				<div style="display:flex;flex-wrap:wrap;gap:8px;">
+					<a href="/setup-2fa" class="btn btn-outline btn-sm">Pengaturan 2FA</a>
+					<a href="/analytics" class="btn btn-outline btn-sm">Creator Analytics</a>
+					<a href="/playlist" class="btn btn-outline btn-sm">Playlist Saya</a>
+					<a href="/live" class="btn btn-outline btn-sm">Live Streaming</a>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		if (!isLoggedIn()) window.location.href = '/login';
+
+		async function loadProfile() {
+			const { ok, data } = await api('/api/profile');
+			if (!ok) return;
+			const p = data.data;
+			document.getElementById('username').value = p.username;
+			document.getElementById('email').value = p.email;
+			document.getElementById('display_name').value = p.display_name || '';
+			document.getElementById('bio').value = p.bio || '';
+			if (p.avatar) document.getElementById('avatar-preview').src = '/avatars/' + p.avatar;
+		}
+
+		document.getElementById('avatar-input').addEventListener('change', async (e) => {
+			const file = e.target.files[0];
+			if (!file) return;
+			const fd = new FormData();
+			fd.append('avatar', file);
+			const { ok, data } = await api('/api/profile/avatar', { method: 'POST', body: fd });
+			if (ok) {
+				document.getElementById('avatar-preview').src = '/avatars/' + data.data.avatar + '?t=' + Date.now();
+				showAlert(document.querySelector('.form-page'), 'Avatar berhasil diupdate', 'success');
+			}
+		});
+
+		document.getElementById('profile-form').addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const { ok } = await api('/api/profile', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					display_name: document.getElementById('display_name').value,
+					bio: document.getElementById('bio').value,
+				}),
+			});
+			if (ok) {
+				showAlert(document.querySelector('.form-page'), 'Profil berhasil disimpan', 'success');
+			}
+		});
+
+		loadProfile();
+	</script>
+</body>
+</html>

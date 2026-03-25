@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Admin Panel - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.admin-page { max-width:1000px; margin:0 auto; }
+		.stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:32px; }
+		.stat-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center; }
+		.stat-card .number { font-size:28px; font-weight:700; color:var(--accent); }
+		.stat-card .label { font-size:13px; color:var(--text-secondary); margin-top:4px; }
+		.tabs { display:flex; gap:4px; margin-bottom:16px; }
+		.tab-btn { padding:8px 16px; border:1px solid var(--border); border-radius:20px; background:var(--bg-secondary); color:var(--text-secondary); cursor:pointer; font-size:13px; }
+		.tab-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+		table { width:100%; border-collapse:collapse; font-size:13px; }
+		th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); }
+		th { color:var(--text-secondary); font-weight:500; }
+		.action-link { color:var(--accent); cursor:pointer; margin-right:8px; }
+		.action-link.danger { color:var(--error); }
+		.badge { padding:2px 8px; border-radius:10px; font-size:11px; }
+		.badge-admin { background:rgba(255,68,68,0.2); color:var(--accent); }
+		.badge-user { background:rgba(170,170,170,0.2); color:var(--text-secondary); }
+		.badge-ready { background:rgba(76,175,80,0.2); color:var(--success); }
+		.badge-processing { background:rgba(255,193,7,0.2); color:#ffc107; }
+		.badge-failed { background:rgba(244,67,54,0.2); color:var(--error); }
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="container admin-page">
+		<h1 style="font-size:20px; margin-bottom:20px">Admin Panel</h1>
+
+		<div id="loading" class="status-processing">
+			<div class="spinner"></div>
+		</div>
+
+		<div id="content" style="display:none">
+			<div class="stats-grid" id="stats-grid"></div>
+
+			<div class="tabs">
+				<button class="tab-btn active" onclick="showTab('users', this)">Users</button>
+				<button class="tab-btn" onclick="showTab('videos', this)">Videos</button>
+			</div>
+
+			<div id="tab-users">
+				<table id="users-table">
+					<thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Videos</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+					<tbody id="users-body"></tbody>
+				</table>
+			</div>
+
+			<div id="tab-videos" style="display:none">
+				<div style="margin-bottom:12px">
+					<select id="status-filter" onchange="loadVideos(1)" style="padding:6px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:13px;">
+						<option value="">Semua Status</option>
+						<option value="ready">Ready</option>
+						<option value="processing">Processing</option>
+						<option value="failed">Failed</option>
+					</select>
+				</div>
+				<table id="videos-table">
+					<thead><tr><th>Judul</th><th>User</th><th>Status</th><th>Views</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+					<tbody id="videos-body"></tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		if (!isLoggedIn()) window.location.href = '/login';
+
+		async function init() {
+			const { ok, data } = await api('/api/admin/dashboard');
+			document.getElementById('loading').style.display = 'none';
+
+			if (!ok) {
+				document.getElementById('loading').style.display = 'block';
+				document.getElementById('loading').innerHTML = '<p style="color:var(--error)">Akses ditolak. Hanya admin.</p>';
+				return;
+			}
+
+			document.getElementById('content').style.display = 'block';
+			const s = data.data;
+			document.getElementById('stats-grid').innerHTML = `
+				<div class="stat-card"><div class="number">${s.totalUsers}</div><div class="label">Total Users</div></div>
+				<div class="stat-card"><div class="number">${s.totalVideos}</div><div class="label">Total Videos</div></div>
+				<div class="stat-card"><div class="number">${s.readyVideos}</div><div class="label">Ready</div></div>
+				<div class="stat-card"><div class="number">${s.processingVideos}</div><div class="label">Processing</div></div>
+				<div class="stat-card"><div class="number">${s.failedVideos}</div><div class="label">Failed</div></div>
+				<div class="stat-card"><div class="number">${s.totalComments}</div><div class="label">Comments</div></div>
+				<div class="stat-card"><div class="number">${formatViews(s.totalViews).replace(' views','')}</div><div class="label">Total Views</div></div>
+			`;
+
+			loadUsers(1);
+		}
+
+		function showTab(tab, btn) {
+			document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+			btn.classList.add('active');
+			document.getElementById('tab-users').style.display = tab === 'users' ? '' : 'none';
+			document.getElementById('tab-videos').style.display = tab === 'videos' ? '' : 'none';
+			if (tab === 'videos') loadVideos(1);
+		}
+
+		async function loadUsers(page) {
+			const { ok, data } = await api('/api/admin/users?page=' + page);
+			if (!ok) return;
+			const users = data.data.users || [];
+			document.getElementById('users-body').innerHTML = users.map(u => `
+				<tr>
+					<td><a href="/channel/${escapeHtml(u.username)}">${escapeHtml(u.username)}</a></td>
+					<td>${escapeHtml(u.email)}</td>
+					<td><span class="badge badge-${u.role}">${u.role}</span></td>
+					<td>${u.video_count}</td>
+					<td>${formatDate(u.created_at)}</td>
+					<td>
+						<span class="action-link" onclick="toggleRole('${u.id}', '${u.role}')">${u.role === 'admin' ? 'Jadikan User' : 'Jadikan Admin'}</span>
+						<span class="action-link danger" onclick="deleteUser('${u.id}', '${escapeHtml(u.username)}')">Hapus</span>
+					</td>
+				</tr>
+			`).join('');
+		}
+
+		async function loadVideos(page) {
+			const status = document.getElementById('status-filter').value;
+			const url = '/api/admin/videos?page=' + page + (status ? '&status=' + status : '');
+			const { ok, data } = await api(url);
+			if (!ok) return;
+			const videos = data.data.videos || [];
+			document.getElementById('videos-body').innerHTML = videos.map(v => `
+				<tr>
+					<td style="max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(v.title)}</td>
+					<td>${escapeHtml(v.username)}</td>
+					<td><span class="badge badge-${v.status}">${v.status}</span></td>
+					<td>${v.views}</td>
+					<td>${formatDate(v.created_at)}</td>
+					<td>
+						<span class="action-link" onclick="window.open('/watch?v=${v.id}')">Lihat</span>
+						<span class="action-link danger" onclick="adminDeleteVideo('${v.id}')">Hapus</span>
+					</td>
+				</tr>
+			`).join('');
+		}
+
+		async function toggleRole(userId, currentRole) {
+			const newRole = currentRole === 'admin' ? 'user' : 'admin';
+			if (!confirm(`Ubah role ke ${newRole}?`)) return;
+			await api('/api/admin/users/' + userId + '/role', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ role: newRole }),
+			});
+			loadUsers(1);
+		}
+
+		async function deleteUser(userId, username) {
+			if (!confirm(`Hapus user "${username}" dan semua datanya?`)) return;
+			await api('/api/admin/users/' + userId, { method: 'DELETE' });
+			loadUsers(1);
+		}
+
+		async function adminDeleteVideo(videoId) {
+			if (!confirm('Hapus video ini?')) return;
+			await api('/api/admin/videos/' + videoId, { method: 'DELETE' });
+			loadVideos(1);
+		}
+
+		init();
+	</script>
+</body>
+</html>

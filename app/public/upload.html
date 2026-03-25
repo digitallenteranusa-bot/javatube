@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Upload Video - GamanTube</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<style>
+		.progress-bar-container {
+			width: 100%;
+			background: var(--bg-input);
+			border-radius: 8px;
+			overflow: hidden;
+			height: 24px;
+			margin: 16px 0;
+		}
+		.progress-bar-fill {
+			height: 100%;
+			background: linear-gradient(90deg, var(--accent), #ff6666);
+			border-radius: 8px;
+			transition: width 0.3s ease;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 12px;
+			font-weight: 600;
+			color: white;
+			min-width: 40px;
+		}
+		.progress-info {
+			display: flex;
+			justify-content: space-between;
+			font-size: 12px;
+			color: var(--text-secondary);
+			margin-top: 4px;
+		}
+	</style>
+</head>
+<body>
+	<nav class="navbar">
+		<a href="/" class="navbar-brand">GamanTube</a>
+		<div class="navbar-nav"></div>
+	</nav>
+
+	<div class="upload-page">
+		<h1>Upload Video</h1>
+		<form id="upload-form">
+			<div class="form-group">
+				<label for="title">Judul Video</label>
+				<input type="text" id="title" placeholder="Masukkan judul video" required>
+			</div>
+			<div class="form-group">
+				<label for="description">Deskripsi</label>
+				<textarea id="description" placeholder="Deskripsi video (opsional)" rows="3"></textarea>
+			</div>
+			<div class="form-group">
+				<label for="video">File Video</label>
+				<div class="upload-drop" id="drop-zone">
+					<p>Drag & drop file video di sini, atau klik untuk memilih</p>
+					<p style="font-size:12px; margin-top:8px">Format: MP4, MOV, AVI, MKV, WebM (maks 500MB)</p>
+					<input type="file" id="video" accept="video/*" required style="display:none">
+				</div>
+				<div id="file-info" style="display:none; margin-top:8px; font-size:13px; color:var(--text-secondary)"></div>
+			</div>
+			<button type="submit" class="btn btn-primary form-submit" id="submit-btn">Upload</button>
+		</form>
+
+		<div id="upload-progress" style="display:none">
+			<p id="progress-text" style="text-align:center; margin-bottom:12px; font-weight:500;">Mengupload video...</p>
+			<div class="progress-bar-container">
+				<div class="progress-bar-fill" id="progress-fill" style="width:0%">0%</div>
+			</div>
+			<div class="progress-info">
+				<span id="progress-loaded">0 MB</span>
+				<span id="progress-speed"></span>
+				<span id="progress-total">0 MB</span>
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/app.js"></script>
+	<script>
+		if (!isLoggedIn()) window.location.href = '/login';
+
+		const dropZone = document.getElementById('drop-zone');
+		const fileInput = document.getElementById('video');
+		const fileInfo = document.getElementById('file-info');
+
+		dropZone.addEventListener('click', () => fileInput.click());
+
+		dropZone.addEventListener('dragover', (e) => {
+			e.preventDefault();
+			dropZone.classList.add('dragover');
+		});
+		dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+		dropZone.addEventListener('drop', (e) => {
+			e.preventDefault();
+			dropZone.classList.remove('dragover');
+			if (e.dataTransfer.files.length) {
+				fileInput.files = e.dataTransfer.files;
+				showFileInfo(e.dataTransfer.files[0]);
+			}
+		});
+
+		fileInput.addEventListener('change', () => {
+			if (fileInput.files[0]) showFileInfo(fileInput.files[0]);
+		});
+
+		function showFileInfo(file) {
+			const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+			fileInfo.textContent = `${file.name} (${sizeMB} MB)`;
+			fileInfo.style.display = 'block';
+		}
+
+		function formatBytes(bytes) {
+			if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+			return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+		}
+
+		document.getElementById('upload-form').addEventListener('submit', (e) => {
+			e.preventDefault();
+
+			const file = fileInput.files[0];
+			if (!file) return;
+
+			if (file.size > 500 * 1024 * 1024) {
+				showAlert(e.target.parentElement, 'File terlalu besar (maks 500MB)');
+				return;
+			}
+
+			const form = document.getElementById('upload-form');
+			const progress = document.getElementById('upload-progress');
+			form.style.display = 'none';
+			progress.style.display = 'block';
+
+			const formData = new FormData();
+			formData.append('title', document.getElementById('title').value);
+			formData.append('description', document.getElementById('description').value);
+			formData.append('video', file);
+
+			const xhr = new XMLHttpRequest();
+			let lastLoaded = 0;
+			let lastTime = Date.now();
+
+			xhr.upload.addEventListener('progress', (ev) => {
+				if (!ev.lengthComputable) return;
+
+				const percent = Math.round((ev.loaded / ev.total) * 100);
+				const fill = document.getElementById('progress-fill');
+				fill.style.width = percent + '%';
+				fill.textContent = percent + '%';
+
+				document.getElementById('progress-loaded').textContent = formatBytes(ev.loaded);
+				document.getElementById('progress-total').textContent = formatBytes(ev.total);
+
+				// Calculate speed
+				const now = Date.now();
+				const timeDiff = (now - lastTime) / 1000;
+				if (timeDiff >= 0.5) {
+					const byteDiff = ev.loaded - lastLoaded;
+					const speed = byteDiff / timeDiff;
+					document.getElementById('progress-speed').textContent = formatBytes(speed) + '/s';
+					lastLoaded = ev.loaded;
+					lastTime = now;
+				}
+			});
+
+			xhr.addEventListener('load', () => {
+				try {
+					const data = JSON.parse(xhr.responseText);
+					if (xhr.status >= 200 && xhr.status < 300 && data.data?.id) {
+						document.getElementById('progress-text').textContent = 'Upload berhasil! Mengalihkan...';
+						document.getElementById('progress-fill').style.width = '100%';
+						document.getElementById('progress-fill').textContent = '100%';
+						setTimeout(() => {
+							window.location.href = '/watch?v=' + data.data.id;
+						}, 1000);
+					} else {
+						const errors = data.errors || {};
+						const msg = Object.values(errors).flat()[0] || data.message || 'Upload gagal';
+						form.style.display = 'block';
+						progress.style.display = 'none';
+						showAlert(form.parentElement, msg);
+					}
+				} catch {
+					form.style.display = 'block';
+					progress.style.display = 'none';
+					showAlert(form.parentElement, 'Upload gagal: respon tidak valid');
+				}
+			});
+
+			xhr.addEventListener('error', () => {
+				form.style.display = 'block';
+				progress.style.display = 'none';
+				showAlert(form.parentElement, 'Upload gagal: koneksi error');
+			});
+
+			xhr.open('POST', '/api/videos');
+			xhr.setRequestHeader('Authorization', 'Bearer ' + getToken());
+			xhr.send(formData);
+		});
+	</script>
+</body>
+</html>

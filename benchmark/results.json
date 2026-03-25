@@ -1,0 +1,32 @@
+{
+  "GamanJS": {
+    "GET JSON (req/s)": 20488,
+    "POST Form (req/s)": 15457.6,
+    "POST File (req/s)": 2018.2
+  },
+  "ExpressJS": {
+    "GET JSON (req/s)": 13421.6,
+    "POST Form (req/s)": 760,
+    "POST File (req/s)": 390.4
+  },
+  "NestJS": {
+    "GET JSON (req/s)": 10878,
+    "POST Form (req/s)": 3686.4,
+    "POST File (req/s)": 351.8
+  },
+  "ElysiaJS": {
+    "GET JSON (req/s)": 26001.6,
+    "POST Form (req/s)": 21328.8,
+    "POST File (req/s)": 338.8
+  },
+  "AdonisJS": {
+    "GET JSON (req/s)": 2021,
+    "POST Form (req/s)": 1856.6,
+    "POST File (req/s)": 181.2
+  },
+  "Hono": {
+    "GET JSON (req/s)": 25630.4,
+    "POST Form (req/s)": 18657.6,
+    "POST File (req/s)": 365.4
+  }
+}
