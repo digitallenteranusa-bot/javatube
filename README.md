@@ -1,90 +1,106 @@
-<p align="right">
-  <img src="https://github.com/7TogkID/gaman/blob/main/.github/images/indonesia.png?raw=true" width="23px">
-</p>
-
 <div align="center">
-  <a href="https://gaman.7togk.id">
-    <img src=".github/images/gaman_b.png" width="100%" >
-  </a>
+  <h1>JavaTube</h1>
+  <p><strong>Platform Video Streaming mirip YouTube</strong></p>
+  <p>Dibangun dengan Gaman Framework (Bun) + SQLite</p>
 </div>
 
-<p align="center">
-  <p align="center">
-  <strong>A Lean Framework for Enterprise Scalability.</strong> 
-  </br>
-  <i>"Complexity doesn't have to be heavy.</i></br>
-  <i>Built on <strong>Bun</strong>, designed for <strong>Logic</strong>, optimized for <strong>Scale</strong>."</i>
-</p>
+---
 
-<p align="center">
-  <a href="https://discord.gg/CQ6fEqBe8f">
-    <img src="https://img.shields.io/discord/1410220109347160220?label=Discord&logo=Discord" alt="Disocrd">
-  </a>
-  <a href="https://www.npmjs.com/package/gaman">
-    <img src="https://img.shields.io/npm/v/gaman" alt="npm version">
-  </a>
-  <a href="https://www.npmjs.com/package/gaman">
-    <img src="https://img.shields.io/npm/dm/gaman" alt="npm download">
-  </a>
-  <a href="https://github.com/gamanjs/gaman/pulse">
-    <img src="https://img.shields.io/github/commit-activity/m/gamanjs/gaman" alt="Commit Activity">
-  </a>
-  <a href="https://github.com/gamanjs/gaman/commits/v2">
-    <img src="https://img.shields.io/github/last-commit/gamanjs/gaman" alt="Commit Activity">
-  </a>
-  <a>
-    <img src="https://img.shields.io/npm/l/gaman" alt="npm license">
-  </a>
-  <a>
-    <img src="https://img.shields.io/github/stars/7togkid/gaman" alt="github stars">
-  </a>
-</p>
+## Fitur
 
-<hr/>
+- **Auth** — Register, login, JWT, role-based (user/admin)
+- **Video Upload & Streaming** — HLS adaptive bitrate (360p / 720p / 1080p)
+- **Like & Dislike** — Toggle reaction dengan count sync
+- **Komentar** — Nested comments (reply)
+- **Subscribe** — Follow channel + notifikasi
+- **Playlist** — CRUD playlist + Watch Later
+- **Rekomendasi** — Video terkait + trending
+- **Live Streaming** — RTMP to HLS via FFmpeg
+- **Email Verification** — Token-based + SMTP
+- **Forgot Password** — Reset via email
+- **2FA** — TOTP (Google Authenticator, Authy, dll)
+- **Creator Analytics** — Views chart, top video, subscriber growth
+- **Admin Panel** — Kelola user & video
+- **Rate Limiting** — Per-endpoint (API/Auth/Upload)
+- **Dark Theme** — UI responsive
 
-## The Lean Manifesto
-- **Zero Magic:** All data flows are transparent (Logic-first).
-- **Native Speed:** Maximizing Bun & Gaman Wire.
-- **Opt-in Complexity** Go enterprise scale only when you need it.
+## Tech Stack
 
-## Create a New Project
+| Komponen | Teknologi |
+|----------|-----------|
+| Runtime | [Bun](https://bun.sh) |
+| Framework | [Gaman](https://github.com/7TogkID/gaman) |
+| Database | SQLite (bun:sqlite) |
+| Auth | JWT ([jose](https://github.com/panva/jose)) + bcrypt |
+| Video | FFmpeg (HLS multi-resolusi) |
+| Frontend | HTML / CSS / JS + [HLS.js](https://github.com/video-dev/hls.js) |
 
-GamanJS currently only supports Bun runtime.
+## Quick Start
 
 ```bash
-bun create gaman@latest
+# 1. Clone
+git clone https://github.com/digitallenteranusa-bot/javatube.git
+cd javatube
+
+# 2. Install dependency
+bun install
+bun add jose
+
+# 3. Pastikan FFmpeg terinstall
+ffmpeg -version
+
+# 4. (Opsional) Buat .env
+cp app/.env.example app/.env
+# Edit JWT_SECRET, SMTP config, dll
+
+# 5. Jalankan
+bun run app/index.ts
+
+# 6. Buka http://localhost:3000
 ```
 
-## Documentation
+## Environment Variables
 
-visit our [Wiki](https://github.com/GamanJS/gaman/wiki)
+| Variable | Default | Keterangan |
+|----------|---------|------------|
+| `JWT_SECRET` | `gamantube-default-secret-change-me` | **Wajib diganti** untuk production |
+| `PORT` | `3000` | Port server |
+| `HOST` | `0.0.0.0` | Host binding |
+| `APP_URL` | `http://localhost:3000` | URL untuk link di email |
+| `SMTP_HOST` | _(kosong)_ | SMTP server (kosong = log ke console) |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USER` | _(kosong)_ | SMTP username |
+| `SMTP_PASS` | _(kosong)_ | SMTP password |
+| `SMTP_FROM` | `noreply@gamantube.local` | Sender email |
 
-## Star History
+## Buat Admin
 
-<a href="https://www.star-history.com/?repos=GamanJS%2Fgaman&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=GamanJS/gaman&type=date&theme=dark&legend=bottom-right" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=GamanJS/gaman&type=date&legend=bottom-right" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=GamanJS/gaman&type=date&legend=bottom-right" />
- </picture>
-</a>
+Setelah register akun, jalankan:
 
-## All contributors ✨
+```bash
+bun -e "const{Database}=require('bun:sqlite');const db=new Database('app/data/app.db');db.run(\"UPDATE users SET role='admin' WHERE username='USERNAME_KAMU'\")"
+```
 
-<a href="https://github.com/GamanJS/gaman/graphs/contributors"><img width="720" src="https://contrib.rocks/image?repo=GamanJS/gaman" alt="A table of avatars from the project's contributors" /></a>
+## Struktur Proyek
 
-## Contributing
+```
+app/
+├── index.ts                  # Entry point
+├── database/init.ts          # SQLite schema (10 tabel)
+├── controllers/              # 11 controller
+├── services/                 # 13 service
+├── middleware/                # Auth, admin, rate limit
+├── routes/                   # API + static
+├── public/                   # 17 halaman HTML + CSS + JS
+├── uploads/                  # Runtime (video, thumbnail, HLS, avatar, live)
+├── data/                     # SQLite database
+└── docs/                     # Dokumentasi + nginx config
+```
 
-**New Contributing welcome!** Check out our [Contributing Guide](CONTRIBUTING.md) for help getting started.
+## Screenshot
 
-## Donate
+> Jalankan server dan buka `http://localhost:3000` untuk melihat tampilan.
 
-- [Saweria](https://saweria.co/angga7togkk1)
+## Lisensi
 
-## Links
-
-- [License (MIT)](https://github.com/7togkid/gaman/blob/main/LICENSE)
-- [Official Website](https://gaman.7togk.id)
-- [Discord](https://discord.gg/CQ6fEqBe8f)
-- [WhatsApp Channel](https://whatsapp.com/channel/0029VbB0keR7z4kgczdSZ33s)
-- [WhatsApp Group](https://chat.whatsapp.com/Dt759JIFWXf05RWJmWcbAM)
+MIT
