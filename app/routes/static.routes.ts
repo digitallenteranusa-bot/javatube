@@ -9,9 +9,8 @@ const SPA_ROUTES: Record<string, string> = {
 	'/channel': '/channel.html',
 };
 
-export const staticRoutes = composeRouter((r) => {
-	r.get('/*', (ctx) => {
-		let reqPath = ctx.path === '/' ? '/index.html' : ctx.path;
+const serveStatic = (ctx: any) => {
+	let reqPath = ctx.path === '/' ? '/index.html' : ctx.path;
 
 		// Check SPA-like routes (e.g. /channel/username -> channel.html)
 		for (const [prefix, htmlFile] of Object.entries(SPA_ROUTES)) {
@@ -35,8 +34,12 @@ export const staticRoutes = composeRouter((r) => {
 		const file = Bun.file(filePath);
 		const mime = detectMime(filePath) || 'application/octet-stream';
 
-		return new Response(file, {
-			headers: { 'Content-Type': mime },
-		});
+	return new Response(file, {
+		headers: { 'Content-Type': mime },
 	});
+};
+
+export const staticRoutes = composeRouter((r) => {
+	r.get('/', serveStatic);
+	r.get('/*', serveStatic);
 });
