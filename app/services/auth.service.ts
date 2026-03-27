@@ -28,7 +28,7 @@ export const authService = composeService(() => ({
 	},
 
 	async login(email: string, password: string) {
-		const user = db.query('SELECT * FROM users WHERE email = ?').get(email) as any;
+		const user = db.query('SELECT * FROM users WHERE email = ? OR username = ?').get(email, email) as any;
 		if (!user) {
 			return { error: 'Email atau password salah' };
 		}
