@@ -7,7 +7,7 @@ import { insertAndSort } from './utils/priority';
 import { Responder, ViewResponse } from './responder';
 import { IGNORED_LOG_FOR_PATH_REGEX } from './contants';
 import { Logger } from './utils/logger';
-import { Michi } from '@gaman/michi';
+import { Michi } from './michi';
 import type { Middleware } from './compose/middleware';
 import { composeRouter } from './compose/router';
 import type {
