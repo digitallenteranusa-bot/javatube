@@ -1,4 +1,4 @@
-# GamanTube - Catatan Proyek
+# JavaTube - Catatan Proyek
 
 Website video streaming mirip YouTube, dibangun dengan Gaman Framework (Bun).
 

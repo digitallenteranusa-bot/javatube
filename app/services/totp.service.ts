@@ -59,7 +59,7 @@ export const totpService = composeService(() => ({
 	},
 
 	getOtpAuthUrl(secret: string, username: string) {
-		const issuer = 'GamanTube';
+		const issuer = 'JavaTube';
 		return `otpauth://totp/${issuer}:${encodeURIComponent(username)}?secret=${secret}&issuer=${issuer}&digits=6&period=30`;
 	},
 

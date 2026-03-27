@@ -68,7 +68,7 @@ sudo systemctl status certbot.timer
 sudo certbot renew --dry-run
 ```
 
-## Langkah 6: Jalankan GamanTube
+## Langkah 6: Jalankan JavaTube
 
 ```bash
 # Install PM2 untuk process management
@@ -140,7 +140,7 @@ echo "*/5 * * * * curl -s 'https://www.duckdns.org/update?domains=gamantube&toke
 | Masalah | Solusi |
 |---------|--------|
 | ERR_CONNECTION_REFUSED | Cek port forwarding & firewall |
-| 502 Bad Gateway | GamanTube server belum jalan (`pm2 status`) |
+| 502 Bad Gateway | JavaTube server belum jalan (`pm2 status`) |
 | SSL Error | Jalankan `sudo certbot renew` |
 | Upload timeout | Naikkan `proxy_read_timeout` di nginx.conf |
 | Video buffering | Bandwidth upload ISP kurang, kurangi resolusi |

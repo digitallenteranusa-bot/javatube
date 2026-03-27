@@ -35,7 +35,7 @@ export const emailService = composeService(() => ({
 
 	async sendVerificationEmail(email: string, username: string, token: string) {
 		const link = `${APP_URL}/verify-email?token=${token}`;
-		const subject = 'Verifikasi Email - GamanTube';
+		const subject = 'Verifikasi Email - JavaTube';
 		const body = `
 Halo ${username},
 
@@ -44,7 +44,7 @@ ${link}
 
 Link ini berlaku selama 24 jam.
 
-- GamanTube
+- JavaTube
 		`.trim();
 
 		return this.sendEmail(email, subject, body);
@@ -52,7 +52,7 @@ Link ini berlaku selama 24 jam.
 
 	async sendResetEmail(email: string, username: string, token: string) {
 		const link = `${APP_URL}/reset-password?token=${token}`;
-		const subject = 'Reset Password - GamanTube';
+		const subject = 'Reset Password - JavaTube';
 		const body = `
 Halo ${username},
 
@@ -61,7 +61,7 @@ ${link}
 
 Link ini berlaku selama 24 jam. Jika kamu tidak meminta reset password, abaikan email ini.
 
-- GamanTube
+- JavaTube
 		`.trim();
 
 		return this.sendEmail(email, subject, body);
@@ -94,7 +94,7 @@ Link ini berlaku selama 24 jam. Jika kamu tidak meminta reset password, abaikan 
 							`MAIL FROM:<${SMTP_FROM}>`,
 							`RCPT TO:<${to}>`,
 							`DATA`,
-							`From: GamanTube <${SMTP_FROM}>`,
+							`From: JavaTube <${SMTP_FROM}>`,
 							`To: ${to}`,
 							`Subject: ${subject}`,
 							`Content-Type: text/plain; charset=UTF-8`,

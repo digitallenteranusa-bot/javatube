@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Channel - GamanTube</title>
+	<title>Channel - JavaTube</title>
 	<link rel="stylesheet" href="/css/style.css">
 	<style>
 		.channel-header { display:flex; align-items:center; gap:20px; padding:32px 0; border-bottom:1px solid var(--border); margin-bottom:24px; }
@@ -20,7 +20,7 @@
 </head>
 <body>
 	<nav class="navbar">
-		<a href="/" class="navbar-brand">GamanTube</a>
+		<a href="/" class="navbar-brand">JavaTube</a>
 		<div class="navbar-nav"></div>
 	</nav>
 
@@ -66,7 +66,7 @@
 
 			channelData = data.data;
 			isSubscribed = channelData.subscribed;
-			document.title = (channelData.display_name || channelData.username) + ' - GamanTube';
+			document.title = (channelData.display_name || channelData.username) + ' - JavaTube';
 
 			document.getElementById('channel-content').style.display = 'block';
 			document.getElementById('channel-name').textContent = channelData.display_name || channelData.username;
