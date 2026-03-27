@@ -50,8 +50,9 @@ async function main() {
 		const start = Date.now();
 
 		const proc = Bun.spawn([
-			"ffmpeg", "-i", inputPath,
+			"ffmpeg", "-threads", "2", "-i", inputPath,
 			"-c:v", "libx264", "-c:a", "aac",
+			"-threads", "2",
 			"-preset", "ultrafast", "-crf", "23",
 			"-vf", `scale=${res.width}:${res.height}:force_original_aspect_ratio=decrease,pad=${res.width}:${res.height}:(ow-iw)/2:(oh-ih)/2`,
 			"-b:v", res.bitrate, "-maxrate", res.bitrate, "-bufsize", `${parseInt(res.bitrate) * 2}k`,
