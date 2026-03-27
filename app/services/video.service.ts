@@ -189,7 +189,7 @@ async function transcodeToHLS(videoId: string, inputPath: string) {
 			'ffmpeg', '-i', inputPath,
 			'-c:v', 'libx264',
 			'-c:a', 'aac',
-			'-preset', 'fast',
+			'-preset', 'ultrafast',
 			'-crf', '23',
 			'-vf', `scale=${res.width}:${res.height}:force_original_aspect_ratio=decrease,pad=${res.width}:${res.height}:(ow-iw)/2:(oh-ih)/2`,
 			'-b:v', res.bitrate,
