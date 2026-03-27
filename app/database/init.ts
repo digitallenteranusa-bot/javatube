@@ -157,6 +157,19 @@ export async function initDatabase() {
 		)
 	`);
 
+	// Seed default admin account
+	const adminExists = db.query("SELECT id FROM users WHERE username = 'java'").get();
+	if (!adminExists) {
+		const { randomId } = await import('../../src/utils/utils');
+		const id = randomId(16);
+		const passwordHash = await Bun.password.hash('java@ind.net');
+		db.run(
+			"INSERT INTO users (id, username, email, password_hash, display_name, role, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			[id, 'java', 'admin@javatube.local', passwordHash, 'JavaTube Admin', 'admin', 1],
+		);
+		Log.info('Default admin account created — username: java');
+	}
+
 	// Migrations for existing databases
 	const migrate = (table: string, column: string, definition: string) => {
 		const cols = (db.query(`PRAGMA table_info(${table})`).all() as any[]).map((c: any) => c.name);
