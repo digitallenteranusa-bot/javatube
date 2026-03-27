@@ -201,4 +201,13 @@ export const apiRoutes = composeRouter((r) => {
 			headers: { 'Content-Type': detectMime(filename) || 'image/jpeg' },
 		});
 	});
+
+	// Direct video route (serve mp4 directly before HLS is ready)
+	r.get('/videos/direct/:filename', (ctx) => {
+		const filename = ctx.param('filename');
+		const filePath = path.join(UPLOADS_DIR, 'videos', filename);
+		return new Response(Bun.file(filePath), {
+			headers: { 'Content-Type': 'video/mp4' },
+		});
+	});
 });

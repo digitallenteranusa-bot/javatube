@@ -23,13 +23,13 @@ export const videoService = composeService(() => ({
 		// Save original file
 		await file.saveTo(filePath);
 
-		// Insert to database
+		// Set status to ready immediately so video can be watched as direct mp4
 		db.run(
 			'INSERT INTO videos (id, user_id, title, description, filename, status) VALUES (?, ?, ?, ?, ?, ?)',
-			[videoId, userId, title, description || '', filename, 'processing'],
+			[videoId, userId, title, description || '', filename, 'ready'],
 		);
 
-		// Start transcoding in background
+		// Start transcoding in background (video is already watchable as mp4)
 		transcodeToHLS(videoId, filePath).catch((err) => {
 			Log.error(`Transcode failed for ${videoId}:`, err);
 		});
