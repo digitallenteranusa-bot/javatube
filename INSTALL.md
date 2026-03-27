@@ -153,16 +153,37 @@ cd app
 
 # Copy template
 cp .env.example .env
+```
 
-# Edit .env
+#### 3.5.1 Generate JWT Secret
+
+Sebelum edit `.env`, generate dulu secret key yang aman:
+
+```bash
+openssl rand -base64 48
+```
+
+Contoh output:
+
+```
+root@javatube:/var/www/javatube/app# openssl rand -base64 48
+aB3kF8mPqR2xN5vB7wY9zA1cE4gI6hK8lO0pS3tU5wX7yA2dF4jL6nQ8rV0bM3e
+```
+
+**Copy string hasil output tersebut** (setiap kali dijalankan hasilnya akan berbeda, itu normal).
+
+#### 3.5.2 Edit File .env
+
+```bash
 nano .env
 ```
 
-Isi file `.env`:
+Isi/edit file `.env` seperti berikut (paste JWT secret dari langkah 3.5.1):
 
 ```env
 # WAJIB diganti untuk production!
-JWT_SECRET=GANTI_DENGAN_STRING_RANDOM_PANJANG
+# Paste hasil dari: openssl rand -base64 48
+JWT_SECRET=aB3kF8mPqR2xN5vB7wY9zA1cE4gI6hK8lO0pS3tU5wX7yA2dF4jL6nQ8rV0bM3e
 
 # Port & host
 PORT=3000
@@ -179,14 +200,20 @@ SMTP_PASS=
 SMTP_FROM=noreply@domain-kamu.com
 ```
 
-Generate JWT secret yang kuat:
+> **PENTING:** Jangan pakai contoh JWT_SECRET di atas! Gunakan hasil `openssl rand -base64 48` milik kamu sendiri.
+
+#### 3.5.3 Simpan dan Keluar dari Nano
+
+1. Tekan `Ctrl+O` (simpan)
+2. Tekan `Enter` (konfirmasi nama file)
+3. Tekan `Ctrl+X` (keluar dari nano)
+
+#### 3.5.4 Verifikasi
 
 ```bash
-# Jalankan ini, lalu copy hasilnya ke JWT_SECRET
-openssl rand -base64 48
+cat .env
+# Pastikan JWT_SECRET sudah terisi string random, bukan "GANTI_DENGAN_STRING_RANDOM_PANJANG"
 ```
-
-Simpan file: `Ctrl+O` → `Enter` → `Ctrl+X`
 
 ### 3.6 Kembali ke Folder Root Proyek
 
