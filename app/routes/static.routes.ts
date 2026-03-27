@@ -9,30 +9,42 @@ const SPA_ROUTES: Record<string, string> = {
 	'/channel': '/channel.html',
 };
 
+// Paths handled by API/other routes — skip static serving
+const SKIP_PREFIXES = ['/api/', '/stream/', '/thumbnails/', '/avatars/', '/live-stream/'];
+
 const serveStatic = (ctx: any) => {
-	let reqPath = ctx.path === '/' ? '/index.html' : ctx.path;
+	const reqPathRaw = ctx.path as string;
 
-		// Check SPA-like routes (e.g. /channel/username -> channel.html)
-		for (const [prefix, htmlFile] of Object.entries(SPA_ROUTES)) {
-			if (reqPath.startsWith(prefix + '/') || reqPath === prefix) {
-				reqPath = htmlFile;
-				break;
-			}
+	// Don't serve static files for API and media routes
+	for (const prefix of SKIP_PREFIXES) {
+		if (reqPathRaw.startsWith(prefix)) {
+			return Res.notFound();
 		}
+	}
 
-		// If no extension, treat as .html page
-		if (!path.extname(reqPath)) {
-			reqPath += '.html';
+	let reqPath = reqPathRaw === '/' ? '/index.html' : reqPathRaw;
+
+	// Check SPA-like routes (e.g. /channel/username -> channel.html)
+	for (const [prefix, htmlFile] of Object.entries(SPA_ROUTES)) {
+		if (reqPath.startsWith(prefix + '/') || reqPath === prefix) {
+			reqPath = htmlFile;
+			break;
 		}
+	}
 
-		// Prevent directory traversal
-		const filePath = path.resolve(PUBLIC_DIR, '.' + reqPath);
-		if (!filePath.startsWith(PUBLIC_DIR)) {
-			return Res.error({}, { status: 403, message: 'Forbidden' });
-		}
+	// If no extension, treat as .html page
+	if (!path.extname(reqPath)) {
+		reqPath += '.html';
+	}
 
-		const file = Bun.file(filePath);
-		const mime = detectMime(filePath) || 'application/octet-stream';
+	// Prevent directory traversal
+	const filePath = path.resolve(PUBLIC_DIR, '.' + reqPath);
+	if (!filePath.startsWith(PUBLIC_DIR)) {
+		return Res.error({}, { status: 403, message: 'Forbidden' });
+	}
+
+	const file = Bun.file(filePath);
+	const mime = detectMime(filePath) || 'application/octet-stream';
 
 	return new Response(file, {
 		headers: { 'Content-Type': mime },
