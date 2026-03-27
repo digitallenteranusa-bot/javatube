@@ -42,8 +42,8 @@ export function Router(prefix: string = ''): RouterBuilder {
 		routes.push(routeData);
 
 		const definition: RouteDefinition = {
-			middleware(fn) {
-				routeData.middlewares.push(fn);
+			middleware(...fn) {
+				routeData.middlewares.push(...fn);
 				return definition;
 			},
 			exception(eh) {

@@ -147,14 +147,12 @@ export const apiRoutes = composeRouter((r) => {
 		r.get('/analytics/subscribers', [analyticsController, 'subscriberGrowth']).middleware(authMiddleware());
 
 		// Admin routes (auth + admin required)
-		r.group('/admin', (r) => {
-			r.get('/dashboard', [adminController, 'dashboard']);
-			r.get('/users', [adminController, 'listUsers']);
-			r.get('/videos', [adminController, 'listVideos']);
-			r.put('/users/:userId/role', [adminController, 'setUserRole']);
-			r.delete('/users/:userId', [adminController, 'deleteUser']);
-			r.delete('/videos/:id', [adminController, 'deleteVideo']);
-		}).middleware(authMiddleware(), adminMiddleware());
+		r.get('/admin/dashboard', [adminController, 'dashboard']).middleware(authMiddleware()).middleware(adminMiddleware());
+		r.get('/admin/users', [adminController, 'listUsers']).middleware(authMiddleware()).middleware(adminMiddleware());
+		r.get('/admin/videos', [adminController, 'listVideos']).middleware(authMiddleware()).middleware(adminMiddleware());
+		r.put('/admin/users/:userId/role', [adminController, 'setUserRole']).middleware(authMiddleware()).middleware(adminMiddleware());
+		r.delete('/admin/users/:userId', [adminController, 'deleteUser']).middleware(authMiddleware()).middleware(adminMiddleware());
+		r.delete('/admin/videos/:id', [adminController, 'deleteVideo']).middleware(authMiddleware()).middleware(adminMiddleware());
 	});
 
 	// HLS streaming routes
